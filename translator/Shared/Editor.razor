@@ -1,1 +1,14 @@
-﻿<textarea class="editor" />
+﻿<textarea class="editor" value="@Program" @oninput="OnProgramChanged" />
+
+@code {
+    [Parameter]
+    public string? Program { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ProgramChanged { get; set; }
+
+    private async Task OnProgramChanged(ChangeEventArgs e) {
+        var program = e?.Value?.ToString();
+        await ProgramChanged.InvokeAsync(program);
+    }
+}

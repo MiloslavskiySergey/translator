@@ -29,7 +29,9 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
-    </PropertyGroup>
+    
+		<nullable>enable</nullable> 
+	</PropertyGroup>
 
     <ItemGroup>
         <!-- App Icon -->
@@ -59,6 +61,7 @@
 
     <ItemGroup>
       <PackageReference Include="Blazorise.Bulma" Version="1.1.2" />
+      <PackageReference Include="Blazorise.DataGrid" Version="1.1.2" />
       <PackageReference Include="Blazorise.Icons.FontAwesome" Version="1.1.2" />
     </ItemGroup>
 

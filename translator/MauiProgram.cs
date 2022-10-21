@@ -1,8 +1,7 @@
 ﻿using Blazorise;
 using Blazorise.Bulma;
 using Blazorise.Icons.FontAwesome;
-using Microsoft.AspNetCore.Components.WebView.Maui;
-using translator.Data;
+using translator.Services;
 
 namespace translator;
 
@@ -23,13 +22,14 @@ public static class MauiProgram
         builder.Services.AddBlazorWebViewDeveloperTools();
 #endif
 
-        builder.Services.AddSingleton<WeatherForecastService>();
         builder.Services.AddBlazorise(options =>
         {
             options.Immediate = true;
         })
             .AddBulmaProviders()
             .AddFontAwesomeIcons();
+
+        builder.Services.AddSingleton<TranslatorService>();
 
         return builder.Build();
     }

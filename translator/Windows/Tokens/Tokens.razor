@@ -1,3 +1,32 @@
 ﻿<Layout>
-	<LayoutContent><h3>Tokens</h3></LayoutContent>
+	<LayoutContent>
+		<DataGrid
+			TItem="TokensTableItem"
+			Data="@tokenItems"
+			PageSize="int.MaxValue"
+			RowSelectable="(_) => false"
+			RowHoverCursor="(_) => Blazorise.Cursor.Default"
+			FixedHeaderDataGridMaxHeight="100vh"
+		    FixedHeaderDataGridHeight="100vh"
+			FixedHeader
+		>
+			<DataGridColumn Field="@nameof(TokensTableItem.Index)" Caption="#"/>
+			<DataGridColumn Field="@nameof(TokensTableItem.TokenType)" Caption="TokenType"/>
+			<DataGridColumn Field="@nameof(TokensTableItem.Lexema)" Caption="Lexema"/>
+			<DataGridColumn Field="@nameof(TokensTableItem.Value)" Caption="Value"/>
+			<DataGridColumn Field="@nameof(TokensTableItem.Line)" Caption="Line"/>
+			<DataGridColumn Field="@nameof(TokensTableItem.Position)" Caption="Position"/>
+		</DataGrid>
+	</LayoutContent>
 </Layout>
+
+@inject TranslatorService Translator
+
+@code {
+	private List<TokensTableItem> tokenItems = new List<TokensTableItem>();
+
+	protected override void OnInitialized()
+	{
+		tokenItems = Translator.Scan();
+	}
+}

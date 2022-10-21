@@ -1,0 +1,24 @@
+﻿@page "/main"
+
+<Card Height="Height.Is100">
+    <CardBody Height="Height.Is100" Display="Display.Flex.Column">
+        <Row Flex="Flex.Grow.Is1">
+            <Column ColumnSize="ColumnSize.Is12">
+                <Editor />
+            </Column>
+        </Row>
+        <Row>
+            <Column ColumnSize="ColumnSize.Is2">
+                <Button Color="Color.Primary" @onclick="Scan">Scan</Button>
+            </Column>
+        </Row>
+    </CardBody>
+</Card>
+
+@code {
+    void Scan()
+    {
+        var tokensWindow = new Window(new TokensPage());
+        Application.Current.OpenWindow(tokensWindow);
+    }
+}

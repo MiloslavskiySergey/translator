@@ -9,3 +9,12 @@
 		</LayoutView>
 	</NotFound>
 </Router>
+
+@code {
+	@inject NavigationManager NavigationManager
+
+	protected override void OnInitialized()
+	{
+		NavigationManager.NavigateTo("main/");
+	}
+}

@@ -52,14 +52,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="Shared\Editor.razor.css" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Content Include="Shared\Editor.razor.css" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="Blazorise.Bulma" Version="1.1.2" />
       <PackageReference Include="Blazorise.DataGrid" Version="1.1.2" />
       <PackageReference Include="Blazorise.Icons.FontAwesome" Version="1.1.2" />
@@ -75,6 +67,11 @@
       <MauiXaml Update="Windows\Tokens\Tokens.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Shared\" />
+      <Folder Include="wwwroot\dist\" />
     </ItemGroup>
 
 </Project>

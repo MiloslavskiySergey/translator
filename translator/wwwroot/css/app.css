@@ -82,3 +82,9 @@ a, .btn-link {
 		padding-left: env(safe-area-inset-left);
 	}
 }
+
+#editor {
+    height: 100%;
+    width: 100%;
+    border: 1px solid #E1E1E1;
+}

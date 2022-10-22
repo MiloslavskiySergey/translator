@@ -5,7 +5,7 @@ namespace translator.Services
 {
     internal class TranslatorService
 	{
-		public string Program { get; set; } = "";
+        public string Program { get; set; } = "";
 
 		public List<TokensTableItem> Scan() {
             var tokenItems = new List<TokensTableItem>();

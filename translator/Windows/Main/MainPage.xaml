@@ -5,7 +5,7 @@
              x:Class="translator.MainPage"
              BackgroundColor="{DynamicResource PageBackgroundColor}">
 
-    <BlazorWebView HostPage="wwwroot/index.html">
+    <BlazorWebView HostPage="wwwroot/main.html">
         <BlazorWebView.RootComponents>
             <RootComponent x:Name="root" Selector="#app" ComponentType="{x:Type local:Main}" />
         </BlazorWebView.RootComponents>

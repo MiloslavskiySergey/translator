@@ -5,6 +5,12 @@
              x:Class="translator.MainPage"
              BackgroundColor="{DynamicResource PageBackgroundColor}">
 
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="File">
+            <MenuFlyoutItem Text="Open"></MenuFlyoutItem>
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
+
     <BlazorWebView HostPage="wwwroot/main.html">
         <BlazorWebView.RootComponents>
             <RootComponent x:Name="root" Selector="#app" ComponentType="{x:Type local:Main}" />

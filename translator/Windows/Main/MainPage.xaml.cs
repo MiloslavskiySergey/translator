@@ -2,8 +2,14 @@
 
 public partial class MainPage : ContentPage
 {
-	public MainPage()
+    public MainPage()
 	{
         InitializeComponent();
-	}
+    }
+
+	private void Scan_Clicked(object sender, EventArgs e)
+	{
+        var tokensWindow = new Window(new TokensPage());
+        Application.Current!.OpenWindow(tokensWindow);
+    }
 }

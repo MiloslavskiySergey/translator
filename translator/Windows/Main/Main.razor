@@ -6,11 +6,6 @@
                     <div id="editor"/>
                 </Column>
             </Row>
-            <Row>
-                <Column ColumnSize="ColumnSize.Is2">
-                    <Button Color="Color.Primary" @onclick="Scan">Scan</Button>
-                </Column>
-            </Row>
         </CardBody>
     </Card>
 </Layout>
@@ -19,16 +14,24 @@
 @inject IJSRuntime JsRuntime
 
 @code {
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private DotNetObjectReference<Main>? objRef;
+
+    protected override void OnInitialized()
     {
-        if (firstRender)
-            await JsRuntime.InvokeVoidAsync("TranslatorJs.loadEditor");
+        objRef = DotNetObjectReference.Create(this);
     }
 
-    private async Task Scan()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        Translator.Program = await JsRuntime.InvokeAsync<string>("TranslatorJs.getProgram");
-        var tokensWindow = new Window(new TokensPage());
-        Application.Current!.OpenWindow(tokensWindow);
+        if (firstRender) {
+            await JsRuntime.InvokeVoidAsync("TranslatorJs.saveMain", objRef);
+            await JsRuntime.InvokeVoidAsync("TranslatorJs.loadEditor");
+        }
+    }
+
+    [JSInvokable]
+    public void TestMethod(string program)
+    {
+        Translator.Program = program;
     }
 }

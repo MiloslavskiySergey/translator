@@ -7,7 +7,12 @@
 
     <ContentPage.MenuBarItems>
         <MenuBarItem Text="File">
-            <MenuFlyoutItem Text="Open"></MenuFlyoutItem>
+            <MenuFlyoutItem Text="Open" />
+            <MenuFlyoutItem Text="Save" />
+            <MenuFlyoutItem Text="Save as..." />
+        </MenuBarItem>
+        <MenuBarItem Text="Translate">
+            <MenuFlyoutItem Text="Scan" Clicked="Scan_Clicked" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
 

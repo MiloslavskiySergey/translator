@@ -55,6 +55,7 @@
       <PackageReference Include="Blazorise.Bulma" Version="1.1.2" />
       <PackageReference Include="Blazorise.DataGrid" Version="1.1.2" />
       <PackageReference Include="Blazorise.Icons.FontAwesome" Version="1.1.2" />
+      <PackageReference Include="CommunityToolkit.Mvvm" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>

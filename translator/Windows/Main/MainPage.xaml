@@ -3,7 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:translator.Windows.Main"
              x:Class="translator.MainPage"
+             x:Name="page"
              BackgroundColor="{DynamicResource PageBackgroundColor}">
+    <ContentPage.BindingContext>
+        <local:MainViewModel />
+    </ContentPage.BindingContext>
 
     <ContentPage.MenuBarItems>
         <MenuBarItem Text="File">
@@ -11,8 +15,8 @@
             <MenuFlyoutItem Text="Save" />
             <MenuFlyoutItem Text="Save as..." />
         </MenuBarItem>
-        <MenuBarItem Text="Translate">
-            <MenuFlyoutItem Text="Scan" Clicked="Scan_Clicked" />
+        <MenuBarItem Text="Translate" BindingContext="{Binding Path=BindingContext, Source={x:Reference page}}">
+            <MenuFlyoutItem Text="Scan" Command="{Binding ScanCommand}" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
 
@@ -21,5 +25,4 @@
             <RootComponent x:Name="root" Selector="#app" ComponentType="{x:Type local:Main}" />
         </BlazorWebView.RootComponents>
     </BlazorWebView>
-
 </ContentPage>

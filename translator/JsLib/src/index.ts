@@ -7,11 +7,15 @@ export function saveMain(mainObj: DotNet.DotNetObject): void {
     main = mainObj;
 }
 
+export function updateProgram(program: string): void {
+    editor!.setValue(program);
+}
+
 export function loadEditor(): void {
     editor = monaco.editor.create(document.getElementById('editor')!);
     const model = editor.getModel()!;
     model.setEOL(monaco.editor.EndOfLineSequence.LF);
     model.onDidChangeContent(async () => {
-        await main!.invokeMethodAsync<void>('TestMethod', model.getValue());
+        await main!.invokeMethodAsync<void>('UpdateProgram', model.getValue());
     });
 }

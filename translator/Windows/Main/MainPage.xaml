@@ -5,13 +5,9 @@
              x:Class="translator.MainPage"
              x:Name="page"
              BackgroundColor="{DynamicResource PageBackgroundColor}">
-    <ContentPage.BindingContext>
-        <local:MainViewModel />
-    </ContentPage.BindingContext>
-
     <ContentPage.MenuBarItems>
-        <MenuBarItem Text="File">
-            <MenuFlyoutItem Text="Open" />
+        <MenuBarItem Text="File" BindingContext="{Binding Path=BindingContext, Source={x:Reference page}}">
+            <MenuFlyoutItem Text="Open" Command="{Binding OpenCommand}" />
             <MenuFlyoutItem Text="Save" />
             <MenuFlyoutItem Text="Save as..." />
         </MenuBarItem>
@@ -22,7 +18,7 @@
 
     <BlazorWebView HostPage="wwwroot/main.html">
         <BlazorWebView.RootComponents>
-            <RootComponent x:Name="root" Selector="#app" ComponentType="{x:Type local:Main}" />
+            <RootComponent Selector="#app" ComponentType="{x:Type local:Main}" />
         </BlazorWebView.RootComponents>
     </BlazorWebView>
 </ContentPage>

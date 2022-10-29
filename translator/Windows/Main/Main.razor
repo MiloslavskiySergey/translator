@@ -26,11 +26,15 @@
         if (firstRender) {
             await JsRuntime.InvokeVoidAsync("TranslatorJs.saveMain", objRef);
             await JsRuntime.InvokeVoidAsync("TranslatorJs.loadEditor");
+            Translator.ProgramUpdated += async (program) =>
+            {
+                await JsRuntime.InvokeVoidAsync("TranslatorJs.updateProgram", new[] { program });
+            };
         }
     }
 
     [JSInvokable]
-    public void TestMethod(string program)
+    public void UpdateProgram(string program)
     {
         Translator.Program = program;
     }

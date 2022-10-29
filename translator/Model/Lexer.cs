@@ -5,7 +5,7 @@ namespace translator.Model;
 /// <summary>
 /// Класс лексера
 /// </summary>
-internal class Lexer : IEnumerable<TokenPosition>
+public class Lexer : IEnumerable<TokenPosition>
 {
     /// <summary>
     /// Конструктор лексера
@@ -416,37 +416,37 @@ public class LexerException : Exception { }
 /// <param name="Token">Токен</param>
 /// <param name="Line">Строка</param>
 /// <param name="Position">Позиция в строке</param>
-internal record TokenPosition(Token Token, int Line, int Position);
+public record TokenPosition(Token Token, int Line, int Position);
 
 /// <summary>
 /// Запись токена
 /// </summary>
-internal record Token(TokenType Type, string Lexema);
+public record Token(TokenType Type, string Lexema);
 
 /// <summary>
 /// Запись целого числа с дополнительным полем для значения числа
 /// </summary>
-internal record IntegerNumberToken(string Lexema, int Value) : Token(TokenType.IntegerNumber, Lexema);
+public record IntegerNumberToken(string Lexema, int Value) : Token(TokenType.IntegerNumber, Lexema);
 
 /// <summary>
 /// Запись числа с плавающей точкой с дополнительным полем для значения числа
 /// </summary>
-internal record FloatNumberToken(string Lexema, double Value) : Token(TokenType.FloatNumber, Lexema);
+public record FloatNumberToken(string Lexema, double Value) : Token(TokenType.FloatNumber, Lexema);
 
 /// <summary>
 /// Запись строки с дополнительным полем для строки
 /// </summary>
-internal record StringToken(string Lexema, string Value) : Token(TokenType.String, Lexema);
+public record StringToken(string Lexema, string Value) : Token(TokenType.String, Lexema);
 
 /// <summary>
 /// Запись логического типа с дополнительным полем значения логического типа
 /// </summary>
-internal record BoolToken(string Lexema, bool Value) : Token(TokenType.BoolConstant, Lexema);
+public record BoolToken(string Lexema, bool Value) : Token(TokenType.BoolConstant, Lexema);
 
 /// <summary>
 /// Тип токена
 /// </summary>
-internal enum TokenType
+public enum TokenType
 {
     RelationGroupOperation,
     AdditionGroupOperation,

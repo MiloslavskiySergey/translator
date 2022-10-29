@@ -1,9 +1,12 @@
-﻿namespace translator;
+﻿using translator.Windows.Main;
+
+namespace translator;
 
 public partial class MainPage : ContentPage
 {
-    public MainPage()
+    public MainPage(MainViewModel mainViewModel)
 	{
         InitializeComponent();
+        BindingContext = mainViewModel;
     }
 }

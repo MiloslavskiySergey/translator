@@ -2,6 +2,7 @@
 using Blazorise.Bulma;
 using Blazorise.Icons.FontAwesome;
 using translator.Services;
+using translator.Windows.Main;
 
 namespace translator;
 
@@ -29,6 +30,8 @@ public static class MauiProgram
             .AddBulmaProviders()
             .AddFontAwesomeIcons();
 
+        builder.Services.AddTransient<MainPage>();
+        builder.Services.AddTransient<MainViewModel>();
         builder.Services.AddSingleton<TranslatorService>();
 
         return builder.Build();

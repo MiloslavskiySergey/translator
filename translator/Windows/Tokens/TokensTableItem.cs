@@ -2,7 +2,7 @@
 
 namespace translator.Windows.Tokens
 {
-    internal record TokensTableItem(
+    public record TokensTableItem(
         int Index,
         TokenType TokenType,
         string Lexema,

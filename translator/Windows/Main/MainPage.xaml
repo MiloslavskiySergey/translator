@@ -8,7 +8,7 @@
     <ContentPage.MenuBarItems>
         <MenuBarItem Text="File" BindingContext="{Binding Path=BindingContext, Source={x:Reference page}}">
             <MenuFlyoutItem Text="Open" Command="{Binding OpenCommand}" />
-            <MenuFlyoutItem Text="Save" />
+            <MenuFlyoutItem Text="Save" Command="{Binding SaveCommand}" />
             <MenuFlyoutItem Text="Save as..." />
         </MenuBarItem>
         <MenuBarItem Text="Translate" BindingContext="{Binding Path=BindingContext, Source={x:Reference page}}">

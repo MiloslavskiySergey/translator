@@ -1,19 +1,31 @@
 ﻿<Layout>
-    <Card Height="Height.Is100">
-        <CardBody Height="Height.Is100" Display="Display.Flex.Column">
-            <Row Flex="Flex.Grow.Is1">
-                <Column ColumnSize="ColumnSize.Is12">
-                    <div id="editor"/>
-                </Column>
-            </Row>
-        </CardBody>
-    </Card>
+    <Tabs SelectedTab="@selectedTab" Margin="Margin.Is0">
+        <Items>
+            <Tab Name="file">@if (Translator.FileInfo is not null)
+                {
+                    @Translator.FileInfo.Name
+                }
+                else
+                {
+                    @newFile
+                }</Tab>
+            </Items>
+    </Tabs>
+    <TabsContent SelectedPanel="@selectedTab" Height="Height.Is100">
+        <TabPanel Name="file" Height="Height.Is100">
+            <div id="editor" />
+        </TabPanel>
+    </TabsContent>
 </Layout>
 
 @inject TranslatorService Translator
 @inject IJSRuntime JsRuntime
 
-@code {
+    @code {
+    private string newFile = "New file";
+
+    private string selectedTab = "file";
+
     private DotNetObjectReference<Main>? objRef;
 
     protected override void OnInitialized()
@@ -21,21 +33,40 @@
         objRef = DotNetObjectReference.Create(this);
     }
 
+    [JSInvokable]
+    public void UpdateProgram(string program)
+    {
+        if (Translator.Program != program)
+        {
+            Translator.SetProgram(program);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender) {
             await JsRuntime.InvokeVoidAsync("TranslatorJs.saveMain", objRef);
             await JsRuntime.InvokeVoidAsync("TranslatorJs.loadEditor");
-            Translator.ProgramUpdated += async (program) =>
-            {
-                await JsRuntime.InvokeVoidAsync("TranslatorJs.updateProgram", new[] { program });
-            };
+            Translator.PropertyChanged += PropertyChangedEventHandler;
         }
     }
 
-    [JSInvokable]
-    public void UpdateProgram(string program)
+    public void Dispose()
     {
-        Translator.Program = program;
+        Translator.PropertyChanged -= PropertyChangedEventHandler;
+        objRef?.Dispose();
+    }
+
+    private async void PropertyChangedEventHandler(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case "Program":
+                await JsRuntime.InvokeVoidAsync("TranslatorJs.updateProgram", new[] { Translator.Program });
+                break;
+            case "FileInfo":
+                StateHasChanged();
+                break;
+        }
     }
 }

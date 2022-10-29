@@ -8,7 +8,9 @@ export function saveMain(mainObj: DotNet.DotNetObject): void {
 }
 
 export function updateProgram(program: string): void {
-    editor!.setValue(program);
+    if (editor!.getValue() != program) {
+        editor!.setValue(program);
+    }
 }
 
 export function loadEditor(): void {

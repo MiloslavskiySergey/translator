@@ -1,14 +1,7 @@
 ﻿<Layout>
     <Tabs SelectedTab="@selectedTab" Margin="Margin.Is0">
         <Items>
-            <Tab Name="file">@if (Translator.FileInfo is not null)
-                {
-                    @Translator.FileInfo.Name
-                }
-                else
-                {
-                    @newFile
-                }</Tab>
+            <Tab Name="file">@GetFileName()</Tab>
             </Items>
     </Tabs>
     <TabsContent SelectedPanel="@selectedTab" Height="Height.Is100">
@@ -21,16 +14,19 @@
 @inject TranslatorService Translator
 @inject IJSRuntime JsRuntime
 
-    @code {
-    private string newFile = "New file";
-
+@code {
     private string selectedTab = "file";
 
     private DotNetObjectReference<Main>? objRef;
 
-    protected override void OnInitialized()
+    private string GetFileName()
     {
-        objRef = DotNetObjectReference.Create(this);
+        var name = Translator.FileInfo is null ? "New file" : Translator.FileInfo.Name;
+        if (Translator.IsProgramModified)
+        {
+            name = $"*{name}";
+        }
+        return name;
     }
 
     [JSInvokable]
@@ -40,6 +36,11 @@
         {
             Translator.SetProgram(program);
         }
+    }
+
+    protected override void OnInitialized()
+    {
+        objRef = DotNetObjectReference.Create(this);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -61,10 +62,13 @@
     {
         switch (e.PropertyName)
         {
-            case "Program":
+            case nameof(Translator.FileInfo):
+                StateHasChanged();
+                break;
+            case nameof(Translator.Program):
                 await JsRuntime.InvokeVoidAsync("TranslatorJs.updateProgram", new[] { Translator.Program });
                 break;
-            case "FileInfo":
+            case nameof(Translator.IsProgramModified):
                 StateHasChanged();
                 break;
         }

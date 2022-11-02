@@ -1,6 +1,7 @@
 ﻿using Blazorise;
 using Blazorise.Bulma;
 using Blazorise.Icons.FontAwesome;
+using CommunityToolkit.Maui;
 using translator.Services;
 #if WINDOWS
 using translator.Platforms.Windows;
@@ -15,6 +16,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

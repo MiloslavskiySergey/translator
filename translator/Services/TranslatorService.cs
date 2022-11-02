@@ -2,6 +2,8 @@
 using System.Windows.Input;
 using translator.Model;
 using translator.Utils;
+using CommunityToolkit.Maui.Views;
+using translator.Popups;
 
 namespace translator.Services;
 
@@ -14,27 +16,47 @@ public class TranslatorService : ObservableObject
         set => SetProperty(ref _fileInfo, value);
     }
 
+    private string _fileProgram = "";
+    public string FileProgram
+    {
+        get => _fileProgram;
+        set
+        {
+            SetProperty(ref _fileProgram, value);
+            OnPropertyChanged(nameof(IsProgramModified));
+        }
+    }
+
     private string _program = "";
     public string Program
     {
         get => _program;
-        set => SetProperty(ref _program, value);
+        set
+        {
+            SetProperty(ref _program, value);
+            OnPropertyChanged(nameof(IsProgramModified));
+        }
     }
     public void SetProgram(string program)
     {
         _program = program;
+        OnPropertyChanged(nameof(IsProgramModified));
     }
 
-    public ICommand ScanCommand { get; private set; }
+    public bool IsProgramModified { get => Program != FileProgram; }
+
+    public ICommand NewCommand { get; private set; }
     public ICommand OpenCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
+    public ICommand ScanCommand { get; private set; }
 
     public TranslatorService(ISaveProgramFileDialogService saveProgramDialog)
     {
-        ScanCommand = new Command(() =>
-        {
-            var tokensWindow = new Window(new TokensPage());
-            Application.Current!.OpenWindow(tokensWindow);
+        NewCommand = new Command(async () => {
+            await SaveChanges();
+            FileInfo = null;
+            FileProgram = "";
+            Program = "";
         });
         OpenCommand = new Command(async () =>
         {
@@ -52,8 +74,9 @@ public class TranslatorService : ObservableObject
             if (result != null)
             {
                 FileInfo = new Utils.FileInfo(result.FullPath, result.FileName);
-                var program = await File.ReadAllTextAsync(result.FullPath);
-                Program = program.Replace("\r\n", "\n");
+                var program = (await File.ReadAllTextAsync(result.FullPath)).Replace("\r\n", "\n");
+                Program = program;
+                FileProgram = program;
             }
         });
         SaveCommand = new Command(async () =>
@@ -68,8 +91,25 @@ public class TranslatorService : ObservableObject
             {
                 await File.WriteAllTextAsync(fileInfo.Path, Program);
                 FileInfo = fileInfo;
+                FileProgram = Program;
             }
         });
+        ScanCommand = new Command(() =>
+        {
+            var tokensWindow = new Window(new TokensPage());
+            Application.Current!.OpenWindow(tokensWindow);
+        });
+    }
+
+    public async Task SaveChanges() 
+    {
+        if (IsProgramModified)
+        {
+            if (FileInfo is null) {
+                var popup = new SaveFilePopup(null);
+                var result = await Application.Current!.MainPage!.ShowPopupAsync(popup) as bool?;
+            }
+        }
     }
 
     public List<TokensTableItem> Scan()

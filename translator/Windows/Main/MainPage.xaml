@@ -14,6 +14,7 @@
         </MenuBarItem>
         <MenuBarItem Text="Translate" BindingContext="{Binding Path=BindingContext, Source={x:Reference page}}">
             <MenuFlyoutItem Text="Scan" Command="{Binding ScanCommand}" />
+            <MenuFlyoutItem Text="Parse" Command="{Binding ParseCommand}" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
 

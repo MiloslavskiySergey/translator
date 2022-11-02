@@ -190,7 +190,7 @@ public class Lexer : IEnumerable<TokenPosition>
         { "\n", new Token(TokenType.Separator, "\n") },
         { "%", new Token(TokenType.Type, "%") },
         { "!", new Token(TokenType.Type, "!") },
-        { "$", new Token(TokenType.Type, "%") },
+        { "$", new Token(TokenType.Type, "$") },
     };
     public Dictionary<string, Token> LiteralsTokens { get; } = new Dictionary<string, Token>();
     public Dictionary<string, Token> IdentifiersTokens { get; } = new Dictionary<string, Token>();

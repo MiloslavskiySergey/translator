@@ -1,0 +1,24 @@
+﻿<Layout>
+	<LayoutContent>
+		<TreeView Nodes="treeViewItems"
+                  GetChildNodes="@(item => item.Children)"
+                  HasChildNodes="@(item => item.Children?.Any() == true)"
+                  @bind-SelectedNode="selectedNode"
+                  @bind-ExpandedNodes="expandedNodes">
+			<NodeContent>@context.Text</NodeContent>
+		</TreeView>
+	</LayoutContent>
+</Layout>
+
+@inject TranslatorService Translator
+
+@code {
+	private IEnumerable<TreeViewItem> treeViewItems = new List<TreeViewItem>();
+	private IList<TreeViewItem> expandedNodes = new List<TreeViewItem>();
+    private TreeViewItem? selectedNode = null;
+
+	protected override void OnInitialized()
+	{
+		treeViewItems = Translator.Parse();
+	}
+}

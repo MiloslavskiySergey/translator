@@ -49,6 +49,7 @@ public class TranslatorService : ObservableObject
     public ICommand OpenCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
     public ICommand ScanCommand { get; private set; }
+    public ICommand ParseCommand { get; private set; }
 
     public TranslatorService(ISaveProgramFileDialogService saveProgramDialog)
     {
@@ -99,6 +100,11 @@ public class TranslatorService : ObservableObject
             var tokensWindow = new Window(new TokensPage());
             Application.Current!.OpenWindow(tokensWindow);
         });
+        ParseCommand = new Command(() =>
+        {
+            var astWindow = new Window(new ASTPage());
+            Application.Current!.OpenWindow(astWindow);
+        });
     }
 
     public async Task SaveChanges() 
@@ -112,7 +118,7 @@ public class TranslatorService : ObservableObject
         }
     }
 
-    public List<TokensTableItem> Scan()
+    public IEnumerable<TokensTableItem> Scan()
     {
         var tokenItems = new List<TokensTableItem>();
         var lexer = new Lexer(Program);
@@ -136,5 +142,38 @@ public class TranslatorService : ObservableObject
             i++;
         }
         return tokenItems;
+    }
+
+    public IEnumerable<TreeViewItem> Parse()
+    {
+        var items = new List<TreeViewItem>();
+        var lexer = new Lexer(Program);
+        var parser = new Parser(lexer);
+        foreach (var child in parser.Program().Children)
+            items.Add(ParseNode(child));
+        return items;
+    }
+
+    private TreeViewItem ParseNode(Node node)
+    {
+        if (node is DescriptionNode descriptionNode)
+        {
+            var children = (from i in descriptionNode.Identifiers select ParseNode(i)).ToList();
+            children.Add(ParseNode(descriptionNode.Type));
+            var item = new TreeViewItem(
+                nameof(DescriptionNode),
+                children
+            );
+            return item;
+        } 
+        if (node is IdentifierNode identifierNode)
+        {
+            return new TreeViewItem($"{nameof(IdentifierNode)}: {identifierNode.Token.Lexema}");
+        }
+        if (node is TypeNode typeNode)
+        {
+            return new TreeViewItem($"{nameof(TypeNode)}: {typeNode.Token.Lexema}");
+        }
+        throw new InvalidOperationException();
     }
 }

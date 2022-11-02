@@ -23,7 +23,7 @@
 @inject TranslatorService Translator
 
 @code {
-	private List<TokensTableItem> tokenItems = new List<TokensTableItem>();
+	private IEnumerable<TokensTableItem> tokenItems = new List<TokensTableItem>();
 
 	protected override void OnInitialized()
 	{

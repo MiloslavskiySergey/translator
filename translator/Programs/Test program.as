@@ -2,10 +2,15 @@
 /*
 Declare variables
 */
-dim a, b, c %
-a ass 111b
+dim a, b, c %;
+a ass 111b;
 /* Input b */
-read(b)
-c ass a + b
-if c > 20 then write("c > 20") else write("c <= 20")
+c ass a + b;
+if c > 20 then
+    c ass 100;
+    b ass 10;
+else
+    dim d %;
+    d ass 30;
+endif
 end

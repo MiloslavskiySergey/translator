@@ -50,7 +50,7 @@ public class Lexer : IEnumerable<TokenPosition>
     {
         if (_pointer == _program.Length)
             return null;
-        while (_program[_pointer] == ' ' || _program[_pointer] == '\t')
+        while (_program[_pointer] == ' ' || _program[_pointer] == '\t' || _program[_pointer] == '\n')
         {
             if (!Skip())
                 return null;
@@ -86,13 +86,7 @@ public class Lexer : IEnumerable<TokenPosition>
             commentDeleted = false;
         }
         var pointerStart = _pointer;
-        if (_program[_pointer] == '\n')
-        {
-            var tokenPosition = new TokenPosition(SpecialSymbolsTokens["\n"], _line, _position);
-            MoveToNextLine();
-            return tokenPosition;
-        }
-        else if (char.IsDigit(_program[_pointer]))
+        if (char.IsDigit(_program[_pointer]))
         {
             var lexema = CollectLexema(c =>
                 c == '.' ||
@@ -170,6 +164,9 @@ public class Lexer : IEnumerable<TokenPosition>
         { "while", new Token(TokenType.KeyWord, "while") },
         { "read", new Token(TokenType.KeyWord, "read") },
         { "write", new Token(TokenType.KeyWord, "write") },
+        { "endif", new Token(TokenType.KeyWord, "endif") },
+        { "endfor", new Token(TokenType.KeyWord, "endfor") },
+        { "endwhile", new Token(TokenType.KeyWord, "endwhile") },
         { "end", new Token(TokenType.KeyWord, "end") },
     };
     public static Dictionary<string, Token> SpecialSymbolsTokens { get; } = new Dictionary<string, Token>()
@@ -187,7 +184,7 @@ public class Lexer : IEnumerable<TokenPosition>
         { "(", new Token(TokenType.Separator, "(") },
         { ")", new Token(TokenType.Separator, ")") },
         { ",", new Token(TokenType.Separator, ",") },
-        { "\n", new Token(TokenType.Separator, "\n") },
+        { ";", new Token(TokenType.Separator, ";") },
         { "%", new Token(TokenType.Type, "%") },
         { "!", new Token(TokenType.Type, "!") },
         { "$", new Token(TokenType.Type, "$") },

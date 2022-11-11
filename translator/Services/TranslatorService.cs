@@ -146,33 +146,142 @@ public class TranslatorService : ObservableObject
 
     public IEnumerable<TreeViewItem> Parse()
     {
-        var items = new List<TreeViewItem>();
         var lexer = new Lexer(Program);
         var parser = new Parser(lexer);
-        foreach (var child in parser.Program().Children)
-            items.Add(ParseNode(child));
-        return items;
+        return new List<TreeViewItem>
+        {
+            ParseNode(parser.Program())
+        };
     }
 
     private TreeViewItem ParseNode(Node node)
     {
+        if (node is BlockNode blockNode)
+        {
+            var children = (from i in blockNode.Children select ParseNode(i)).ToList();
+            return new TreeViewItem(
+                nameof(BlockNode),
+                children
+            );
+        }
         if (node is DescriptionNode descriptionNode)
         {
-            var children = (from i in descriptionNode.Identifiers select ParseNode(i)).ToList();
-            children.Add(ParseNode(descriptionNode.Type));
-            var item = new TreeViewItem(
+            var indentifiers = (from i in descriptionNode.Identifiers select ParseNode(i)).ToList();
+            var types = new List<TreeViewItem>
+            {
+                ParseNode(descriptionNode.Type)
+            };
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Identifiers", indentifiers),
+                new TreeViewItem("Type", types),
+            };
+            return new TreeViewItem(
                 nameof(DescriptionNode),
                 children
             );
-            return item;
-        } 
+        }
         if (node is IdentifierNode identifierNode)
         {
             return new TreeViewItem($"{nameof(IdentifierNode)}: {identifierNode.Token.Lexema}");
         }
+        if (node is IntegerNumberNode integerNumberNode)
+        {
+            return new TreeViewItem($"{nameof(IntegerNumberNode)}: {integerNumberNode.Token.Value}");
+        }
+        if (node is FloatNumberNode floatNumberNode)
+        {
+            return new TreeViewItem($"{nameof(FloatNumberNode)}: {floatNumberNode.Token.Value}");
+        }
+        if (node is BoolConstantNode boolConstantNode)
+        {
+            return new TreeViewItem($"{nameof(BoolConstantNode)}: {boolConstantNode.Token.Lexema}");
+        }
         if (node is TypeNode typeNode)
         {
             return new TreeViewItem($"{nameof(TypeNode)}: {typeNode.Token.Lexema}");
+        }
+        if (node is AssignmentOperatorNode assignmentOperatorNode)
+        {
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Identifier", new List<TreeViewItem>
+                {
+                    ParseNode(assignmentOperatorNode.Identifier)
+                }),
+                new TreeViewItem("Expression", new List<TreeViewItem>
+                {
+                    ParseNode(assignmentOperatorNode.Expression)
+                }),
+            };
+            return new TreeViewItem(
+                nameof(AssignmentOperatorNode),
+                children
+            );
+        }
+        if (node is UnaryOperationNode unaryOperationNode)
+        {
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Operator", new List<TreeViewItem>
+                {
+                    new TreeViewItem(unaryOperationNode.Token.Lexema)
+                }),
+                new TreeViewItem("Operand", new List<TreeViewItem>
+                {
+                    ParseNode(unaryOperationNode.Operand)
+                }),
+            };
+            return new TreeViewItem(
+                nameof(UnaryOperationNode),
+                children
+            );
+        }
+        if (node is BinaryOperationNode binaryOperationNode)
+        {
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Operator", new List<TreeViewItem>
+                {
+                    new TreeViewItem(binaryOperationNode.Token.Lexema)
+                }),
+                new TreeViewItem("LeftOperand", new List<TreeViewItem>
+                {
+                    ParseNode(binaryOperationNode.LeftOperand)
+                }),
+                new TreeViewItem("RightOperand", new List<TreeViewItem>
+                {
+                    ParseNode(binaryOperationNode.RightOperand)
+                }),
+            };
+            return new TreeViewItem(
+                nameof(BinaryOperationNode),
+                children
+            );
+        }
+        if (node is ConditionalOperotorNode conditionalOperotorNode)
+        {
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Condition", new List<TreeViewItem>
+                {
+                    ParseNode(conditionalOperotorNode.Condition)
+                }),
+                new TreeViewItem("TrueBody", new List<TreeViewItem>
+                {
+                    ParseNode(conditionalOperotorNode.TrueBody)
+                }),
+            };
+            if (conditionalOperotorNode.FalseBody is not null)
+            {
+                children.Add(new TreeViewItem("FalseBody", new List<TreeViewItem> {
+                     ParseNode(conditionalOperotorNode.FalseBody)
+                }));
+            }
+            return new TreeViewItem(
+                nameof(ConditionalOperotorNode),
+                children
+            );
         }
         throw new InvalidOperationException();
     }

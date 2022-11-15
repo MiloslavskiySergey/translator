@@ -60,19 +60,7 @@ public class Parser
     private DescriptionNode Description()
     {
         Scan();
-        var identifiers = new List<IdentifierNode>();
-        if (IsIdentifier())
-            identifiers.Add(Identifier());
-        else
-            throw new ParserException();
-        while (IsSeparator(","))
-        {
-            Scan();
-            if (IsIdentifier())
-                identifiers.Add(Identifier());
-            else
-                throw new ParserException();
-        }
+        var identifiers = ReadIdentifiers();
         if (!IsType())
             throw new ParserException();
         var type = Type();
@@ -96,7 +84,7 @@ public class Parser
         )
         {
             if (IsIdentifier())
-                operators.Add(AssignmentOperator());
+                operators.Add(AssignmentSemicolonOperator());
             if (IsKeyWord("if"))
                 operators.Add(ConditionalOperotor());
             if (IsKeyWord("for"))
@@ -111,7 +99,18 @@ public class Parser
         return operators;
     }
 
-    private AssignmentOperatorNode AssignmentOperator()
+    private AssignmentNode AssignmentOperator()
+    {
+        var identifier = Identifier();
+        if (IsKeyWord("ass"))
+            Scan();
+        else
+            throw new ParserException();
+        var expression = Expression();
+        return new AssignmentNode(identifier, expression);
+    }
+
+    private AssignmentNode AssignmentSemicolonOperator()
     {
         var identifier = Identifier();
         if (IsKeyWord("ass"))
@@ -123,7 +122,7 @@ public class Parser
             Scan();
         else
             throw new ParserException();
-        return new AssignmentOperatorNode(identifier, expression);
+        return new AssignmentNode(identifier, expression);
     }
 
     private Node Expression()
@@ -134,7 +133,7 @@ public class Parser
             var token = Token;
             Scan();
             var rightOperand = Operand();
-            return new BinaryOperationNode(token, leftOperand, rightOperand);
+            return new BinaryOperationNode(new OperatorNode(token.Lexema), leftOperand, rightOperand);
         }
         return leftOperand;
     }
@@ -147,7 +146,7 @@ public class Parser
             var token = Token;
             Scan();
             var rightOperand = Term();
-            return new BinaryOperationNode(token, leftOperand, rightOperand);
+            return new BinaryOperationNode(new OperatorNode(token.Lexema), leftOperand, rightOperand);
         }
         return leftOperand;
     }
@@ -160,7 +159,7 @@ public class Parser
             var token = Token;
             Scan();
             var rightOperand = Factor();
-            return new BinaryOperationNode(token, leftOperand, rightOperand);
+            return new BinaryOperationNode(new OperatorNode(token.Lexema), leftOperand, rightOperand);
         }
         return leftOperand;
     }
@@ -186,21 +185,21 @@ public class Parser
     {
         var token = (IntegerNumberToken)Token;
         Scan();
-        return new IntegerNumberNode(token);
+        return new IntegerNumberNode(token.Value);
     }
 
     private FloatNumberNode FloatNumber()
     {
         var token = (FloatNumberToken)Token;
         Scan();
-        return new FloatNumberNode(token);
+        return new FloatNumberNode(token.Value);
     }
 
     private BoolConstantNode BoolConstant()
     {
-        var token = Token;
+        var token = (BoolToken)Token;
         Scan();
-        return new BoolConstantNode(token);
+        return new BoolConstantNode(token.Value);
     }
 
     private UnaryOperationNode UnaryOperation()
@@ -208,7 +207,7 @@ public class Parser
         var token = Token;
         Scan();
         var operand = Factor();
-        return new UnaryOperationNode(token, operand);
+        return new UnaryOperationNode(new OperatorNode(token.Lexema), operand);
     }
 
     private Node ParenthesizedExpression()
@@ -246,17 +245,58 @@ public class Parser
 
     private FixedLoopOperatorNode FixedLoopOperator()
     {
-        return new FixedLoopOperatorNode();
+        Scan();
+        var assigment = AssignmentOperator();
+        if (IsKeyWord("to"))
+            Scan();
+        else
+            throw new ParserException();
+        var expression = Expression();
+        if (IsKeyWord("do"))
+            Scan();
+        else
+            throw new ParserException();
+        var body = Block();
+        if (IsKeyWord("endfor"))
+            Scan();
+        else
+            throw new ParserException();
+        return new FixedLoopOperatorNode(assigment, expression, body);
     }
 
     private ConditionalLoopOperatorNode ConditionalLoopOperator()
     {
-        return new ConditionalLoopOperatorNode();
+        Scan();
+        var expression = Expression();
+        if (IsKeyWord("do"))
+            Scan();
+        else
+            throw new ParserException();
+        var body = Block();
+        if (IsKeyWord("endwhile"))
+            Scan();
+        else
+            throw new ParserException();
+        return new ConditionalLoopOperatorNode(expression, body);
     }
 
     private InputOperatorNode InputOperator()
     {
-        return new InputOperatorNode();
+        Scan();
+        if (IsSeparator("("))
+            Scan();
+        else
+            throw new ParserException();
+        var identifiers = ReadIdentifiers();
+        if (IsSeparator(")"))
+            Scan();
+        else
+            throw new ParserException();
+        if (IsSeparator(";"))
+            Scan();
+        else
+            throw new ParserException();
+        return new InputOperatorNode(identifiers);
     }
 
     private OutputOperatorNode OutputOperator()
@@ -268,14 +308,32 @@ public class Parser
     {
         var token = Token; 
         Scan();
-        return new IdentifierNode(token);
+        return new IdentifierNode(token.Lexema);
     }
 
     private TypeNode Type()
     {
         var token = Token;
         Scan();
-        return new TypeNode(token);
+        return new TypeNode(token.Lexema);
+    }
+
+    private List<IdentifierNode> ReadIdentifiers()
+    {
+        var identifiers = new List<IdentifierNode>();
+        if (IsIdentifier())
+            identifiers.Add(Identifier());
+        else
+            throw new ParserException();
+        while (IsSeparator(","))
+        {
+            Scan();
+            if (IsIdentifier())
+                identifiers.Add(Identifier());
+            else
+                throw new ParserException();
+        }
+        return identifiers;
     }
 
     private bool IsIdentifier()
@@ -358,79 +416,88 @@ public class DescriptionNode : Node
 
 public class IdentifierNode : Node
 {
-    public Token Token { get; private set; }
-    public IdentifierNode(Token token)
+    public string Name { get; private set; }
+    public IdentifierNode(string name)
     {
-        Token = token;
+        Name = name;
     }
 }
 
 public class IntegerNumberNode : Node
 {
-    public IntegerNumberToken Token { get; private set; }
-    public IntegerNumberNode(IntegerNumberToken token)
+    public int Value { get; private set; }
+    public IntegerNumberNode(int value)
     {
-        Token = token;
+        Value = value;
     }
 }
 
 public class FloatNumberNode : Node
 {
-    public FloatNumberToken Token { get; private set; }
-    public FloatNumberNode(FloatNumberToken token)
+    public double Value { get; private set; }
+    public FloatNumberNode(double value)
     {
-        Token = token;
+        Value = value;
     }
 }
 
 public class BoolConstantNode : Node
 {
-    public Token Token { get; private set; }
-    public BoolConstantNode(Token token)
+    public bool Value { get; private set; }
+    public BoolConstantNode(bool value)
     {
-        Token = token;
+        Value = value;
     }
 }
 
 public class TypeNode : Node
 {
-    public Token Token { get; private set; }
-    public TypeNode(Token token)
+    public string Name { get; private set; }
+    public TypeNode(string name)
     {
-        Token = token;
+        Name = name;
     }
 }
 
-public class AssignmentOperatorNode : Node
+public class AssignmentNode : Node
 {
     public IdentifierNode Identifier { get; }
     public Node Expression { get; }
-    public AssignmentOperatorNode(IdentifierNode identifier, Node expression)
+    public AssignmentNode(IdentifierNode identifier, Node expression)
     {
         Identifier = identifier;
         Expression = expression;
     }
 }
 
+public class OperatorNode : Node
+{
+    public string Name { get; private set; }
+    public OperatorNode(string name)
+    {
+        Name = name;
+    }
+}
+
 public class UnaryOperationNode : Node
 {
-    public Token Token { get; private set; }
+    public OperatorNode Operator { get; private set; }
     public Node Operand { get; private set; }
-    public UnaryOperationNode(Token token, Node operand)
+    public UnaryOperationNode(OperatorNode operatorNode, Node operand)
     {
-        Token = token;
+        Operator = operatorNode;
         Operand = operand;
     }
 }
 
 public class BinaryOperationNode : Node
 {
-    public Token Token { get; private set; }
+    public OperatorNode Operator { get; private set; }
     public Node LeftOperand { get; private set; }
     public Node RightOperand { get; private set; }
-    public BinaryOperationNode(Token token, Node leftOperand, Node rightOperand)
+    public BinaryOperationNode(OperatorNode operatorNode, Node leftOperand, Node rightOperand)
     {
-        Token = token;
+        Operator = operatorNode;
         LeftOperand = leftOperand;
         RightOperand = rightOperand;
     }
@@ -449,13 +516,38 @@ public class ConditionalOperotorNode : Node
     }
 }
 
-public class FixedLoopOperatorNode : Node 
+public class FixedLoopOperatorNode : Node
 {
+    public AssignmentNode Assignment { get; private set; }
+    public Node Expression { get; private set; }
+    public BlockNode Body { get; private set; }
+    public FixedLoopOperatorNode(AssignmentNode assignment, Node expression, BlockNode body)
+    {
+        Assignment = assignment;
+        Expression = expression;
+        Body = body;
+    }
 }
 
-public class ConditionalLoopOperatorNode : Node { }
+public class ConditionalLoopOperatorNode : Node
+{
+    public Node Expression { get; private set; }
+    public BlockNode Body { get; private set; }
+    public ConditionalLoopOperatorNode(Node expression, BlockNode body)
+    {
+        Expression = expression;
+        Body = body;
+    }
+}
 
-public class InputOperatorNode : Node { }
+public class InputOperatorNode : Node
+{
+    public List<IdentifierNode> Identifiers { get; private set; }
+    public InputOperatorNode(List<IdentifierNode> identifiers)
+    {
+        Identifiers = identifiers;
+    }
+}
 
 public class OutputOperatorNode : Node { }
 

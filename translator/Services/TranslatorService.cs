@@ -183,25 +183,25 @@ public class TranslatorService : ObservableObject
         }
         if (node is IdentifierNode identifierNode)
         {
-            return new TreeViewItem($"{nameof(IdentifierNode)}: {identifierNode.Token.Lexema}");
+            return new TreeViewItem($"{nameof(IdentifierNode)}: {identifierNode.Name}");
         }
         if (node is IntegerNumberNode integerNumberNode)
         {
-            return new TreeViewItem($"{nameof(IntegerNumberNode)}: {integerNumberNode.Token.Value}");
+            return new TreeViewItem($"{nameof(IntegerNumberNode)}: {integerNumberNode.Value}");
         }
         if (node is FloatNumberNode floatNumberNode)
         {
-            return new TreeViewItem($"{nameof(FloatNumberNode)}: {floatNumberNode.Token.Value}");
+            return new TreeViewItem($"{nameof(FloatNumberNode)}: {floatNumberNode.Value}");
         }
         if (node is BoolConstantNode boolConstantNode)
         {
-            return new TreeViewItem($"{nameof(BoolConstantNode)}: {boolConstantNode.Token.Lexema}");
+            return new TreeViewItem($"{nameof(BoolConstantNode)}: {boolConstantNode.Value}");
         }
         if (node is TypeNode typeNode)
         {
-            return new TreeViewItem($"{nameof(TypeNode)}: {typeNode.Token.Lexema}");
+            return new TreeViewItem($"{nameof(TypeNode)}: {typeNode.Name}");
         }
-        if (node is AssignmentOperatorNode assignmentOperatorNode)
+        if (node is AssignmentNode assignmentOperatorNode)
         {
             var children = new List<TreeViewItem>
             {
@@ -215,9 +215,13 @@ public class TranslatorService : ObservableObject
                 }),
             };
             return new TreeViewItem(
-                nameof(AssignmentOperatorNode),
+                nameof(AssignmentNode),
                 children
             );
+        }
+        if (node is OperatorNode operatorNode)
+        {
+            return new TreeViewItem($"{nameof(OperatorNode)}: {operatorNode.Name}");
         }
         if (node is UnaryOperationNode unaryOperationNode)
         {
@@ -225,7 +229,7 @@ public class TranslatorService : ObservableObject
             {
                 new TreeViewItem("Operator", new List<TreeViewItem>
                 {
-                    new TreeViewItem(unaryOperationNode.Token.Lexema)
+                    ParseNode(unaryOperationNode.Operator)
                 }),
                 new TreeViewItem("Operand", new List<TreeViewItem>
                 {
@@ -243,7 +247,7 @@ public class TranslatorService : ObservableObject
             {
                 new TreeViewItem("Operator", new List<TreeViewItem>
                 {
-                    new TreeViewItem(binaryOperationNode.Token.Lexema)
+                    ParseNode(binaryOperationNode.Operator)
                 }),
                 new TreeViewItem("LeftOperand", new List<TreeViewItem>
                 {
@@ -280,6 +284,58 @@ public class TranslatorService : ObservableObject
             }
             return new TreeViewItem(
                 nameof(ConditionalOperotorNode),
+                children
+            );
+        }
+        if (node is FixedLoopOperatorNode fixedLoopOperatorNode)
+        {
+            var children = new List<TreeViewItem>()
+            {
+                new TreeViewItem("Assignment", new List<TreeViewItem>
+                {
+                    ParseNode(fixedLoopOperatorNode.Assignment)
+                }),
+                new TreeViewItem("Expression", new List<TreeViewItem>
+                {
+                    ParseNode(fixedLoopOperatorNode.Expression)
+                }),
+                new TreeViewItem("Body", new List<TreeViewItem>
+                {
+                    ParseNode(fixedLoopOperatorNode.Body)
+                }),
+            };
+            return new TreeViewItem(
+                nameof(FixedLoopOperatorNode),
+                children
+            );
+        }
+        if (node is ConditionalLoopOperatorNode conditionalLoopOperatorNode)
+        {
+            var children = new List<TreeViewItem>()
+            {
+                new TreeViewItem("Expression", new List<TreeViewItem>
+                {
+                    ParseNode(conditionalLoopOperatorNode.Expression)
+                }),
+                new TreeViewItem("Body", new List<TreeViewItem>
+                {
+                    ParseNode(conditionalLoopOperatorNode.Body)
+                }),
+            };
+            return new TreeViewItem(
+                nameof(ConditionalLoopOperatorNode),
+                children
+            );
+        }
+        if (node is InputOperatorNode inputOperatorNode)
+        {
+            var indentifiers = (from i in inputOperatorNode.Identifiers select ParseNode(i)).ToList();
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Identifiers", indentifiers),
+            };
+            return new TreeViewItem(
+                nameof(InputOperatorNode),
                 children
             );
         }

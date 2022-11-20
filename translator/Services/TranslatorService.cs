@@ -131,14 +131,22 @@ public class TranslatorService : ObservableObject
                 value = intagerToken.Value;
             else if (token is FloatNumberToken floatToken)
                 value = floatToken.Value;
-            else if (token is BoolToken boolToken)
+            else if (token is BoolConstantToken boolToken)
                 value = boolToken.Value;
-            else if (token is StringToken stringToken)
+            else if (token is StringConstantToken stringToken)
                 value = stringToken.Value;
             var lexema = token.Lexema;
             if (lexema == "\n")
                 lexema = "new line";
-            tokenItems.Add(new TokensTableItem(i, token.Type, lexema, value, tokenPosition.Line + 1, tokenPosition.Position + 1));
+            tokenItems.Add(
+                new TokensTableItem(
+                    i,
+                    token.Type,
+                    lexema,
+                    value,
+                    tokenPosition.Position.Line + 1,tokenPosition.Position.Position + 1
+                )
+            );
             i++;
         }
         return tokenItems;
@@ -192,6 +200,10 @@ public class TranslatorService : ObservableObject
         if (node is FloatNumberNode floatNumberNode)
         {
             return new TreeViewItem($"{nameof(FloatNumberNode)}: {floatNumberNode.Value}");
+        }
+        if (node is StringConstantNode stringConstantNode)
+        {
+            return new TreeViewItem($"{nameof(StringConstantNode)}: \"{stringConstantNode.Value}\"");
         }
         if (node is BoolConstantNode boolConstantNode)
         {
@@ -263,23 +275,35 @@ public class TranslatorService : ObservableObject
                 children
             );
         }
-        if (node is ConditionalOperotorNode conditionalOperotorNode)
+        if (node is ConditionalBlockNode conditionalBlockNode)
         {
-            var children = new List<TreeViewItem>
+            var children = new List<TreeViewItem>()
             {
                 new TreeViewItem("Condition", new List<TreeViewItem>
                 {
-                    ParseNode(conditionalOperotorNode.Condition)
+                    ParseNode(conditionalBlockNode.Condition)
                 }),
-                new TreeViewItem("TrueBody", new List<TreeViewItem>
+                new TreeViewItem("Body", new List<TreeViewItem>
                 {
-                    ParseNode(conditionalOperotorNode.TrueBody)
+                    ParseNode(conditionalBlockNode.Body)
                 }),
             };
-            if (conditionalOperotorNode.FalseBody is not null)
+            return new TreeViewItem(
+                nameof(ConditionalLoopOperatorNode),
+                children
+            );
+        }
+        if (node is ConditionalOperotorNode conditionalOperotorNode)
+        {
+            var conditions = (from c in conditionalOperotorNode.Conditions select ParseNode(c)).ToList();
+            var children = new List<TreeViewItem>
             {
-                children.Add(new TreeViewItem("FalseBody", new List<TreeViewItem> {
-                     ParseNode(conditionalOperotorNode.FalseBody)
+                new TreeViewItem("Conditions", conditions),
+            };
+            if (conditionalOperotorNode.ElseBody is not null)
+            {
+                children.Add(new TreeViewItem("ElseBody", new List<TreeViewItem> {
+                     ParseNode(conditionalOperotorNode.ElseBody)
                 }));
             }
             return new TreeViewItem(
@@ -336,6 +360,18 @@ public class TranslatorService : ObservableObject
             };
             return new TreeViewItem(
                 nameof(InputOperatorNode),
+                children
+            );
+        }
+        if (node is OutputOperatorNode outputOperatorNode)
+        {
+            var expressions = (from e in outputOperatorNode.Expressions select ParseNode(e)).ToList();
+            var children = new List<TreeViewItem>
+            {
+                new TreeViewItem("Expressions", expressions),
+            };
+            return new TreeViewItem(
+                nameof(OutputOperatorNode),
                 children
             );
         }

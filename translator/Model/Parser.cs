@@ -1,17 +1,19 @@
-﻿namespace translator.Model;
+﻿using Blazorise;
+
+namespace translator.Model;
 
 public class Parser
 {
     private readonly Lexer _lexer;
     private TokenPosition? _current = null;
 
-    private Token Token
+    private TokenPosition TokenPosition
     {
         get 
         {
             if (_current is null)
-                throw new ParserException();
-            return _current.Token;
+                throw Error("Неожиданное окончание программы");
+            return _current!;
         }
     }
 
@@ -20,24 +22,22 @@ public class Parser
         _lexer = lexer;
     }
 
-    public void Scan()
-    {
-        _current = _lexer.Scan();
-    }
-
     public BlockNode Program()
     {
         Scan();
         var block = Block();
-        if (IsKeyWord("end"))
-            Scan();
-        else
-            throw new ParserException();
+        KeyWordSafe("end");
         return block;
+    }
+
+    private void Scan()
+    {
+        _current = _lexer.Scan();
     }
 
     private BlockNode Block()
     {
+        var position = TokenPosition.Position;
         var children = new List<Node>();
         while (
             IsKeyWord("dim") ||
@@ -54,21 +54,17 @@ public class Parser
             else
                 children.AddRange(Operator());
         }
-        return new BlockNode(children);
+        return new BlockNode(children, position);
     }
 
     private DescriptionNode Description()
     {
+        var position = TokenPosition.Position;
         Scan();
         var identifiers = ReadIdentifiers();
-        if (!IsType())
-            throw new ParserException();
-        var type = Type();
-        if (IsSeparator(";"))
-            Scan();
-        else
-            throw new ParserException();
-        return new DescriptionNode(identifiers, type);
+        var type = TypeSafe();
+        SeparatorSafe(";");
+        return new DescriptionNode(identifiers, type, position);
     }
 
     private List<Node> Operator()
@@ -101,70 +97,100 @@ public class Parser
 
     private AssignmentNode AssignmentOperator()
     {
-        var identifier = Identifier();
-        if (IsKeyWord("ass"))
-            Scan();
-        else
-            throw new ParserException();
+        var position = TokenPosition.Position;
+        var identifier = IdentifierSafe();
+        KeyWordSafe("as");
         var expression = Expression();
-        return new AssignmentNode(identifier, expression);
+        return new AssignmentNode(identifier, expression, position);
     }
 
     private AssignmentNode AssignmentSemicolonOperator()
     {
+        var position = TokenPosition.Position;
         var identifier = Identifier();
-        if (IsKeyWord("ass"))
-            Scan();
-        else
-            throw new ParserException();
+        KeyWordSafe("as");
         var expression = Expression();
-        if (IsSeparator(";"))
-            Scan();
-        else
-            throw new ParserException();
-        return new AssignmentNode(identifier, expression);
+        SeparatorSafe(";");
+        return new AssignmentNode(identifier, expression, position);
     }
 
     private Node Expression()
     {
+        var position = TokenPosition.Position;
         var leftOperand = Operand();
-        if (IsRelationGroupOperation())
+        while (IsRelationGroupOperation())
         {
-            var token = Token;
+            var operatorTokenPosition = TokenPosition;
             Scan();
             var rightOperand = Operand();
-            return new BinaryOperationNode(new OperatorNode(token.Lexema), leftOperand, rightOperand);
+            leftOperand = new BinaryOperationNode(
+                new OperatorNode(operatorTokenPosition.Token.Lexema, operatorTokenPosition.Position),
+                leftOperand,
+                rightOperand,
+                position
+            );
         }
         return leftOperand;
     }
 
     private Node Operand()
     {
+        var position = TokenPosition.Position;
         var leftOperand = Term();
-        if (IsAdditionGroupOperation())
+        while (IsAdditionGroupOperation())
         {
-            var token = Token;
+            var operatorTokenPosition = TokenPosition;
             Scan();
             var rightOperand = Term();
-            return new BinaryOperationNode(new OperatorNode(token.Lexema), leftOperand, rightOperand);
+            leftOperand = new BinaryOperationNode(
+                new OperatorNode(operatorTokenPosition.Token.Lexema, operatorTokenPosition.Position),
+                leftOperand,
+                rightOperand,
+                position
+            );
         }
         return leftOperand;
     }
 
     private Node Term()
     {
+        var position = TokenPosition.Position;
         var leftOperand = Factor();
-        if (IsMultiplicationGroupOperation())
+        while (IsMultiplicationGroupOperation())
         {
-            var token = Token;
+            var operatorTokenPosition = TokenPosition;
             Scan();
             var rightOperand = Factor();
-            return new BinaryOperationNode(new OperatorNode(token.Lexema), leftOperand, rightOperand);
+            leftOperand = new BinaryOperationNode(
+                new OperatorNode(operatorTokenPosition.Token.Lexema, operatorTokenPosition.Position),
+                leftOperand,
+                rightOperand,
+                position
+            );
         }
         return leftOperand;
     }
 
     private Node Factor()
+    {
+        var position = TokenPosition.Position;
+        var leftOperand = PowerSafe();
+        if (IsPowerOperation())
+        {
+            var operatorTokenPosition = TokenPosition;
+            Scan();
+            var rightOperand = Factor();
+            return new BinaryOperationNode(
+                new OperatorNode(operatorTokenPosition.Token.Lexema, operatorTokenPosition.Position),
+                leftOperand,
+                rightOperand,
+                position
+            );
+        }
+        return leftOperand;
+    }
+
+    private Node PowerSafe()
     {
         if (IsIdentifier())
             return Identifier();
@@ -172,232 +198,299 @@ public class Parser
             return IntegerNumber();
         if (IsFloatNumber())
             return FloatNumber();
+        if (IsStringConstant())
+            return StringConstant();
         if (IsBoolConstant())
             return BoolConstant();
         if (IsUnaryOperation())
             return UnaryOperation();
         if (IsSeparator("("))
             return ParenthesizedExpression();
-        throw new ParserException();
+        throw Error("Ожидалось выражение");
     }
-   
+
     private IntegerNumberNode IntegerNumber()
     {
-        var token = (IntegerNumberToken)Token;
+        var position = TokenPosition.Position;
+        var token = (IntegerNumberToken)TokenPosition.Token;
         Scan();
-        return new IntegerNumberNode(token.Value);
+        return new IntegerNumberNode(token.Value, position);
     }
 
     private FloatNumberNode FloatNumber()
     {
-        var token = (FloatNumberToken)Token;
+        var position = TokenPosition.Position;
+        var token = (FloatNumberToken)TokenPosition.Token;
         Scan();
-        return new FloatNumberNode(token.Value);
+        return new FloatNumberNode(token.Value, position);
+    }
+
+    private StringConstantNode StringConstant()
+    {
+        var position = TokenPosition.Position;
+        var token = (StringConstantToken)TokenPosition.Token;
+        Scan();
+        return new StringConstantNode(token.Value, position);
     }
 
     private BoolConstantNode BoolConstant()
     {
-        var token = (BoolToken)Token;
+        var position = TokenPosition.Position;
+        var token = (BoolConstantToken)TokenPosition.Token;
         Scan();
-        return new BoolConstantNode(token.Value);
+        return new BoolConstantNode(token.Value, position);
     }
 
     private UnaryOperationNode UnaryOperation()
     {
-        var token = Token;
+        var operatorTokenPosition = TokenPosition;
         Scan();
-        var operand = Factor();
-        return new UnaryOperationNode(new OperatorNode(token.Lexema), operand);
+        var operand = PowerSafe();
+        return new UnaryOperationNode(
+            new OperatorNode(operatorTokenPosition.Token.Lexema, operatorTokenPosition.Position),
+            operand,
+            operatorTokenPosition.Position
+        );
     }
 
     private Node ParenthesizedExpression()
     {
         Scan();
         var expession = Expression();
-        if (IsSeparator(")"))
-            Scan();
-        else
-            throw new ParserException();
+        SeparatorSafe(")");
         return expession;
+    }
+
+    private ConditionalBlockNode ConditionalBlock()
+    {
+        var position = TokenPosition.Position;
+        Scan();
+        var condition = Expression();
+        KeyWordSafe("then");
+        var body = Block();
+        return new ConditionalBlockNode(condition, body, position);
     }
 
     private ConditionalOperotorNode ConditionalOperotor()
     {
-        Scan();
-        var condition = Expression();
-        if (IsKeyWord("then"))
-            Scan();
-        else
-            throw new ParserException();
-        var trueBody = Block();
-        BlockNode? falseBody = null;
-        if (IsKeyWord("else"))
+        var position = TokenPosition.Position;
+        var conditions = new List<ConditionalBlockNode>
+        {
+            ConditionalBlock()
+        };
+        BlockNode? elseBody = null;
+        while (IsKeyWord("else") && elseBody is null)
         {
             Scan();
-            falseBody = Block();
+            if (IsKeyWord("if"))
+                conditions.Add(ConditionalBlock());
+            else
+                elseBody = Block();
         }
-        if (IsKeyWord("endif"))
-            Scan();
-        else
-            throw new ParserException();
-        return new ConditionalOperotorNode(condition, trueBody, falseBody);
+        KeyWordSafe("endif");
+        return new ConditionalOperotorNode(conditions, elseBody, position);
     }
 
     private FixedLoopOperatorNode FixedLoopOperator()
     {
+        var position = TokenPosition.Position;
         Scan();
         var assigment = AssignmentOperator();
-        if (IsKeyWord("to"))
-            Scan();
-        else
-            throw new ParserException();
+        KeyWordSafe("to");
         var expression = Expression();
-        if (IsKeyWord("do"))
-            Scan();
-        else
-            throw new ParserException();
+        KeyWordSafe("do");
         var body = Block();
-        if (IsKeyWord("endfor"))
-            Scan();
-        else
-            throw new ParserException();
-        return new FixedLoopOperatorNode(assigment, expression, body);
+        KeyWordSafe("endfor");
+        return new FixedLoopOperatorNode(assigment, expression, body, position);
     }
 
     private ConditionalLoopOperatorNode ConditionalLoopOperator()
     {
+        var position = TokenPosition.Position;
         Scan();
         var expression = Expression();
-        if (IsKeyWord("do"))
-            Scan();
-        else
-            throw new ParserException();
+        KeyWordSafe("do");
         var body = Block();
-        if (IsKeyWord("endwhile"))
-            Scan();
-        else
-            throw new ParserException();
-        return new ConditionalLoopOperatorNode(expression, body);
+        KeyWordSafe("endwhile");
+        return new ConditionalLoopOperatorNode(expression, body, position);
     }
 
     private InputOperatorNode InputOperator()
     {
+        var position = TokenPosition.Position;
         Scan();
-        if (IsSeparator("("))
-            Scan();
-        else
-            throw new ParserException();
+        SeparatorSafe("(");
         var identifiers = ReadIdentifiers();
-        if (IsSeparator(")"))
-            Scan();
-        else
-            throw new ParserException();
-        if (IsSeparator(";"))
-            Scan();
-        else
-            throw new ParserException();
-        return new InputOperatorNode(identifiers);
+        SeparatorSafe(")");
+        SeparatorSafe(";");
+        return new InputOperatorNode(identifiers, position);
     }
 
     private OutputOperatorNode OutputOperator()
     {
-        return new OutputOperatorNode();
+        var position = TokenPosition.Position;
+        Scan();
+        SeparatorSafe("(");
+        var expressions = ReadExpressions();
+        SeparatorSafe(")");
+        SeparatorSafe(";");
+        return new OutputOperatorNode(expressions, position);
+    }
+
+    private IdentifierNode IdentifierSafe()
+    {
+        if (IsIdentifier())
+            return Identifier();
+        throw Error("Ожидался идентификатор");
     }
 
     private IdentifierNode Identifier()
     {
-        var token = Token; 
+        var tokenPosition = TokenPosition;
         Scan();
-        return new IdentifierNode(token.Lexema);
+        return new IdentifierNode(tokenPosition.Token.Lexema, tokenPosition.Position);
+    }
+
+    private TypeNode TypeSafe()
+    {
+        if (IsType())
+            return Type();
+        throw Error("Ожидался тип");
     }
 
     private TypeNode Type()
     {
-        var token = Token;
+        var tokenPosition = TokenPosition;
         Scan();
-        return new TypeNode(token.Lexema);
+        return new TypeNode(tokenPosition.Token.Lexema, tokenPosition.Position);
     }
 
     private List<IdentifierNode> ReadIdentifiers()
     {
         var identifiers = new List<IdentifierNode>();
-        if (IsIdentifier())
-            identifiers.Add(Identifier());
-        else
-            throw new ParserException();
+        identifiers.Add(IdentifierSafe());
         while (IsSeparator(","))
         {
             Scan();
-            if (IsIdentifier())
-                identifiers.Add(Identifier());
-            else
-                throw new ParserException();
+            identifiers.Add(IdentifierSafe());
         }
         return identifiers;
     }
 
+    private List<Node> ReadExpressions()
+    {
+        var expressions = new List<Node>();
+        expressions.Add(Expression());
+        while (IsSeparator(","))
+        {
+            Scan();
+            expressions.Add(Expression());
+        }
+        return expressions;
+    }
+
+    private void KeyWordSafe(string keyWord)
+    {
+        if (IsKeyWord(keyWord))
+            Scan();
+        else
+            throw Error($"Ожидалось ключевое слово `{keyWord}`");
+    }
+
+    private void SeparatorSafe(string separator)
+    {
+        if (IsSeparator(separator))
+            Scan();
+        else
+            throw Error($"Ожидался разделитель `{separator}`");
+    }
+
     private bool IsIdentifier()
     {
-        return Token.Type == TokenType.Identifier;
+        return TokenPosition.Token.Type == TokenType.Identifier;
     }
 
     private bool IsType()
     {
-        return Token.Type == TokenType.Type;
+        return TokenPosition.Token.Type == TokenType.Type;
     }
 
     private bool IsKeyWord(string keyWord)
     {
-        return Token.Type == TokenType.KeyWord && Token.Lexema == keyWord;
+        return TokenPosition.Token.Type == TokenType.KeyWord && TokenPosition.Token.Lexema == keyWord;
     }
 
     private bool IsSeparator(string separator)
     {
-        return Token.Type == TokenType.Separator && Token.Lexema == separator;
+        return TokenPosition.Token.Type == TokenType.Separator && TokenPosition.Token.Lexema == separator;
     }
 
     private bool IsRelationGroupOperation()
     {
-        return Token.Type == TokenType.RelationGroupOperation;
+        return TokenPosition.Token.Type == TokenType.RelationGroupOperation;
     }
 
     private bool IsAdditionGroupOperation()
     {
-        return Token.Type == TokenType.AdditionGroupOperation;
+        return TokenPosition.Token.Type == TokenType.AdditionGroupOperation;
     }
 
     private bool IsMultiplicationGroupOperation()
     {
-        return Token.Type == TokenType.MultiplicationGroupOperation;
+        return TokenPosition.Token.Type == TokenType.MultiplicationGroupOperation;
+    }
+
+    private bool IsPowerOperation()
+    {
+        return TokenPosition.Token.Type == TokenType.PowerOperation;
     }
 
     private bool IsIntegerNumber()
     {
-        return Token.Type == TokenType.IntegerNumber;
+        return TokenPosition.Token.Type == TokenType.IntegerNumber;
     }
 
     private bool IsFloatNumber()
     {
-        return Token.Type == TokenType.FloatNumber;
+        return TokenPosition.Token.Type == TokenType.FloatNumber;
+    }
+
+    private bool IsStringConstant()
+    {
+        return TokenPosition.Token.Type == TokenType.StringConstant;
     }
 
     private bool IsBoolConstant()
     {
-        return Token.Type == TokenType.BoolConstant;
+        return TokenPosition.Token.Type == TokenType.BoolConstant;
     }
 
     private bool IsUnaryOperation()
     {
-        return Token.Type == TokenType.UnaryOperation;
+        return TokenPosition.Token.Type == TokenType.UnaryOperation;
+    }
+
+    private ParserException Error(string message)
+    {
+        if (_current is null)
+            return new ParserException(message);
+        return new ParserException(message, _current.Position);
     }
 }
 
-public class Node { }
+public class Node
+{
+    public ProgramPosition Position { get; set; }
+    public Node(ProgramPosition position)
+    {
+        Position = position;
+    }
+}
 
 public class BlockNode : Node
 {
-    public List<Node> Children { get; } = new();
-    public BlockNode(List<Node> children)
+    public List<Node> Children { get; private set; }
+    public BlockNode(List<Node> children, ProgramPosition position) : base(position)
     {
         Children = children;
     }
@@ -407,7 +500,7 @@ public class DescriptionNode : Node
 {
     public List<IdentifierNode> Identifiers { get; private set; }
     public TypeNode Type { get; private set; }
-    public DescriptionNode(List<IdentifierNode> identifiers, TypeNode type)
+    public DescriptionNode(List<IdentifierNode> identifiers, TypeNode type, ProgramPosition position) : base(position)
     {
         Identifiers = identifiers;
         Type = type;
@@ -417,7 +510,7 @@ public class DescriptionNode : Node
 public class IdentifierNode : Node
 {
     public string Name { get; private set; }
-    public IdentifierNode(string name)
+    public IdentifierNode(string name, ProgramPosition position) : base(position)
     {
         Name = name;
     }
@@ -426,7 +519,7 @@ public class IdentifierNode : Node
 public class IntegerNumberNode : Node
 {
     public int Value { get; private set; }
-    public IntegerNumberNode(int value)
+    public IntegerNumberNode(int value, ProgramPosition position) : base(position)
     {
         Value = value;
     }
@@ -435,7 +528,16 @@ public class IntegerNumberNode : Node
 public class FloatNumberNode : Node
 {
     public double Value { get; private set; }
-    public FloatNumberNode(double value)
+    public FloatNumberNode(double value, ProgramPosition position) : base(position)
+    {
+        Value = value;
+    }
+}
+
+public class StringConstantNode : Node
+{
+    public string Value { get; private set; }
+    public StringConstantNode(string value, ProgramPosition position) : base(position)
     {
         Value = value;
     }
@@ -444,7 +546,7 @@ public class FloatNumberNode : Node
 public class BoolConstantNode : Node
 {
     public bool Value { get; private set; }
-    public BoolConstantNode(bool value)
+    public BoolConstantNode(bool value, ProgramPosition position) : base(position)
     {
         Value = value;
     }
@@ -453,7 +555,7 @@ public class BoolConstantNode : Node
 public class TypeNode : Node
 {
     public string Name { get; private set; }
-    public TypeNode(string name)
+    public TypeNode(string name, ProgramPosition position) : base(position)
     {
         Name = name;
     }
@@ -463,7 +565,7 @@ public class AssignmentNode : Node
 {
     public IdentifierNode Identifier { get; }
     public Node Expression { get; }
-    public AssignmentNode(IdentifierNode identifier, Node expression)
+    public AssignmentNode(IdentifierNode identifier, Node expression, ProgramPosition position) : base(position)
     {
         Identifier = identifier;
         Expression = expression;
@@ -473,7 +575,7 @@ public class AssignmentNode : Node
 public class OperatorNode : Node
 {
     public string Name { get; private set; }
-    public OperatorNode(string name)
+    public OperatorNode(string name, ProgramPosition position) : base(position)
     {
         Name = name;
     }
@@ -483,7 +585,7 @@ public class UnaryOperationNode : Node
 {
     public OperatorNode Operator { get; private set; }
     public Node Operand { get; private set; }
-    public UnaryOperationNode(OperatorNode operatorNode, Node operand)
+    public UnaryOperationNode(OperatorNode operatorNode, Node operand, ProgramPosition position) : base(position)
     {
         Operator = operatorNode;
         Operand = operand;
@@ -495,7 +597,7 @@ public class BinaryOperationNode : Node
     public OperatorNode Operator { get; private set; }
     public Node LeftOperand { get; private set; }
     public Node RightOperand { get; private set; }
-    public BinaryOperationNode(OperatorNode operatorNode, Node leftOperand, Node rightOperand)
+    public BinaryOperationNode(OperatorNode operatorNode, Node leftOperand, Node rightOperand, ProgramPosition position) : base(position)
     {
         Operator = operatorNode;
         LeftOperand = leftOperand;
@@ -503,16 +605,25 @@ public class BinaryOperationNode : Node
     }
 }
 
-public class ConditionalOperotorNode : Node
+public class ConditionalBlockNode : Node
 {
     public Node Condition { get; private set; }
-    public BlockNode TrueBody { get; private set; }
-    public BlockNode? FalseBody { get; private set; }
-    public ConditionalOperotorNode(Node condition, BlockNode trueBody, BlockNode? falseBody)
+    public BlockNode Body { get; private set; }
+    public ConditionalBlockNode(Node condition, BlockNode body, ProgramPosition position) : base(position)
     {
         Condition = condition;
-        TrueBody = trueBody;
-        FalseBody = falseBody;
+        Body = body;
+    }
+}
+
+public class ConditionalOperotorNode : Node
+{
+    public List<ConditionalBlockNode> Conditions { get; private set; }
+    public BlockNode? ElseBody { get; private set; }
+    public ConditionalOperotorNode(List<ConditionalBlockNode> conditions, BlockNode? elseBody, ProgramPosition position) : base(position)
+    {
+        Conditions = conditions;
+        ElseBody = elseBody;
     }
 }
 
@@ -521,7 +632,7 @@ public class FixedLoopOperatorNode : Node
     public AssignmentNode Assignment { get; private set; }
     public Node Expression { get; private set; }
     public BlockNode Body { get; private set; }
-    public FixedLoopOperatorNode(AssignmentNode assignment, Node expression, BlockNode body)
+    public FixedLoopOperatorNode(AssignmentNode assignment, Node expression, BlockNode body, ProgramPosition position) : base(position)
     {
         Assignment = assignment;
         Expression = expression;
@@ -533,7 +644,7 @@ public class ConditionalLoopOperatorNode : Node
 {
     public Node Expression { get; private set; }
     public BlockNode Body { get; private set; }
-    public ConditionalLoopOperatorNode(Node expression, BlockNode body)
+    public ConditionalLoopOperatorNode(Node expression, BlockNode body, ProgramPosition position) : base(position)
     {
         Expression = expression;
         Body = body;
@@ -543,12 +654,22 @@ public class ConditionalLoopOperatorNode : Node
 public class InputOperatorNode : Node
 {
     public List<IdentifierNode> Identifiers { get; private set; }
-    public InputOperatorNode(List<IdentifierNode> identifiers)
+    public InputOperatorNode(List<IdentifierNode> identifiers, ProgramPosition position) : base(position)
     {
         Identifiers = identifiers;
     }
 }
 
-public class OutputOperatorNode : Node { }
+public class OutputOperatorNode : Node
+{
+    public List<Node> Expressions { get; private set; }
+    public OutputOperatorNode(List<Node> expressions, ProgramPosition position) : base(position)
+    {
+        Expressions = expressions;
+    }
+}
 
-public class ParserException : Exception { }
+public class ParserException : Exception {
+    public ParserException(string message) : base(message) { }
+    public ParserException(string message, ProgramPosition position): base($"{message} - {position}") { }
+}

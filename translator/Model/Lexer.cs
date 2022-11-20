@@ -96,13 +96,13 @@ public class Lexer : IEnumerable<TokenPosition>
             var oldPosition = _position;
             _position += _pointer - pointerStart;
             if (LiteralsTokens.ContainsKey(lexema))
-                return new TokenPosition(LiteralsTokens[lexema], _line, oldPosition);
+                return new TokenPosition(LiteralsTokens[lexema], new ProgramPosition(_line, oldPosition));
             foreach (var parser in _numberParsers)
             {
                 if (parser.TryParse(lexema.ToLower(), out var token))
                 {
                     LiteralsTokens.Add(lexema, token!);
-                    return new TokenPosition(LiteralsTokens[lexema], _line, oldPosition);
+                    return new TokenPosition(LiteralsTokens[lexema], new ProgramPosition(_line, oldPosition));
                 }
             }
             throw new LexerException();
@@ -113,11 +113,11 @@ public class Lexer : IEnumerable<TokenPosition>
             var oldPosition = _position;
             _position += _pointer - pointerStart;
             if (LetterTokens.ContainsKey(lexema))
-                return new TokenPosition(LetterTokens[lexema], _line, oldPosition);
+                return new TokenPosition(LetterTokens[lexema], new ProgramPosition(_line, oldPosition));
             if (IdentifiersTokens.ContainsKey(lexema))
-                return new TokenPosition(IdentifiersTokens[lexema], _line, oldPosition);
+                return new TokenPosition(IdentifiersTokens[lexema], new ProgramPosition(_line, oldPosition));
             IdentifiersTokens.Add(lexema, new Token(TokenType.Identifier, lexema));
-            return new TokenPosition(IdentifiersTokens[lexema], _line, oldPosition);
+            return new TokenPosition(IdentifiersTokens[lexema], new ProgramPosition(_line, oldPosition));
         }
         else if (_program[_pointer] == '"')
         {
@@ -125,9 +125,9 @@ public class Lexer : IEnumerable<TokenPosition>
             var oldPosition = _position;
             _position += _pointer - pointerStart;
             if (LiteralsTokens.ContainsKey(lexema))
-                return new TokenPosition(LiteralsTokens[lexema], _line, oldPosition);
-            LiteralsTokens.Add(lexema, new StringToken(lexema, lexema[1..^1]));
-            return new TokenPosition(LiteralsTokens[lexema], _line, oldPosition);
+                return new TokenPosition(LiteralsTokens[lexema], new ProgramPosition(_line, oldPosition));
+            LiteralsTokens.Add(lexema, new StringConstantToken(lexema, lexema[1..^1]));
+            return new TokenPosition(LiteralsTokens[lexema], new ProgramPosition(_line, oldPosition));
         }
         else
         {
@@ -138,7 +138,7 @@ public class Lexer : IEnumerable<TokenPosition>
                 {
                     var oldPosition = _position;
                     _position += _pointer - pointerStart;
-                    return new TokenPosition(SpecialSymbolsTokens[lexema], _line, oldPosition);
+                    return new TokenPosition(SpecialSymbolsTokens[lexema], new ProgramPosition(_line, oldPosition));
                 }
                 _pointer -= count;
             }
@@ -151,10 +151,10 @@ public class Lexer : IEnumerable<TokenPosition>
         { "or", new Token(TokenType.AdditionGroupOperation, "or") },
         { "and", new Token(TokenType.MultiplicationGroupOperation, "and") },
         { "not", new Token(TokenType.UnaryOperation, "not") },
-        { "true", new BoolToken("true", true) },
-        { "false", new BoolToken("false", false) },
+        { "true", new BoolConstantToken("true", true) },
+        { "false", new BoolConstantToken("false", false) },
         { "dim", new Token(TokenType.KeyWord, "dim") },
-        { "ass", new Token(TokenType.KeyWord, "ass") },
+        { "as", new Token(TokenType.KeyWord, "as") },
         { "if", new Token(TokenType.KeyWord, "if") },
         { "then", new Token(TokenType.KeyWord, "then") },
         { "else", new Token(TokenType.KeyWord, "else") },
@@ -181,12 +181,14 @@ public class Lexer : IEnumerable<TokenPosition>
         { "-", new Token(TokenType.AdditionGroupOperation, "-") },
         { "*", new Token(TokenType.MultiplicationGroupOperation, "*") },
         { "/", new Token(TokenType.MultiplicationGroupOperation, "/") },
+        { "^", new Token(TokenType.PowerOperation, "^") },
         { "(", new Token(TokenType.Separator, "(") },
         { ")", new Token(TokenType.Separator, ")") },
         { ",", new Token(TokenType.Separator, ",") },
         { ";", new Token(TokenType.Separator, ";") },
         { "%", new Token(TokenType.Type, "%") },
         { "!", new Token(TokenType.Type, "!") },
+        { "@", new Token(TokenType.Type, "@") },
         { "$", new Token(TokenType.Type, "$") },
     };
     public Dictionary<string, Token> LiteralsTokens { get; } = new Dictionary<string, Token>();
@@ -408,12 +410,24 @@ public class Lexer : IEnumerable<TokenPosition>
 public class LexerException : Exception { }
 
 /// <summary>
-/// Позиция токена
+/// Запись позиции в программе
 /// </summary>
-/// <param name="Token">Токен</param>
 /// <param name="Line">Строка</param>
 /// <param name="Position">Позиция в строке</param>
-public record TokenPosition(Token Token, int Line, int Position);
+public record ProgramPosition(int Line, int Position)
+{
+    public override string ToString()
+    {
+        return $"({Line + 1}:{Position + 1})";
+    }
+}
+
+/// <summary>
+/// Запись позиции токена в программе
+/// </summary>
+/// <param name="Token">Токен</param>
+/// <param name="Position">Позиция в программе</param>
+public record TokenPosition(Token Token, ProgramPosition Position);
 
 /// <summary>
 /// Запись токена
@@ -433,12 +447,12 @@ public record FloatNumberToken(string Lexema, double Value) : Token(TokenType.Fl
 /// <summary>
 /// Запись строки с дополнительным полем для строки
 /// </summary>
-public record StringToken(string Lexema, string Value) : Token(TokenType.String, Lexema);
+public record StringConstantToken(string Lexema, string Value) : Token(TokenType.StringConstant, Lexema);
 
 /// <summary>
 /// Запись логического типа с дополнительным полем значения логического типа
 /// </summary>
-public record BoolToken(string Lexema, bool Value) : Token(TokenType.BoolConstant, Lexema);
+public record BoolConstantToken(string Lexema, bool Value) : Token(TokenType.BoolConstant, Lexema);
 
 /// <summary>
 /// Тип токена
@@ -448,6 +462,7 @@ public enum TokenType
     RelationGroupOperation,
     AdditionGroupOperation,
     MultiplicationGroupOperation,
+    PowerOperation,
     UnaryOperation,
     Separator,
     Type,
@@ -455,6 +470,6 @@ public enum TokenType
     KeyWord,
     IntegerNumber,
     FloatNumber,
-    String,
+    StringConstant,
     Identifier,
 }

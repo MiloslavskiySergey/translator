@@ -1,24 +1,39 @@
 ﻿<Layout>
 	<LayoutContent>
-		<TreeView Nodes="treeViewItems"
-                  GetChildNodes="@(item => item.Children)"
-                  HasChildNodes="@(item => item.Children?.Any() == true)"
-                  @bind-SelectedNode="selectedNode"
-                  @bind-ExpandedNodes="expandedNodes">
-			<NodeContent>@context.Text</NodeContent>
-		</TreeView>
+		@if(treeViewItems is not null)
+		{
+			<TreeView Nodes="treeViewItems"
+				  GetChildNodes="@(item => item?.Children)"
+				  HasChildNodes="@(item => item?.Children?.Any() == true)"
+				  @bind-SelectedNode="selectedNode"
+				  @bind-ExpandedNodes="expandedNodes">
+				<NodeContent>@context?.Text</NodeContent>
+			</TreeView>
+		}
+		else
+		{
+			<Div Margin="Margin.Is2" TextColor="TextColor.Danger">@error</Div>
+		}
 	</LayoutContent>
 </Layout>
 
 @inject TranslatorService Translator
 
 @code {
-	private IEnumerable<TreeViewItem> treeViewItems = new List<TreeViewItem>();
-	private IList<TreeViewItem> expandedNodes = new List<TreeViewItem>();
-    private TreeViewItem? selectedNode = null;
+	private IEnumerable<TreeViewItem>? treeViewItems = null;
+	private string? error = null;
+	private IList<TreeViewItem?> expandedNodes = new List<TreeViewItem?>();
+	private TreeViewItem? selectedNode = null;
 
 	protected override void OnInitialized()
 	{
-		treeViewItems = Translator.Parse();
+		try
+		{
+			treeViewItems = Translator.Parse();
+		}
+		catch (ParserException e)
+		{
+			error = e.Message;
+		}
 	}
 }

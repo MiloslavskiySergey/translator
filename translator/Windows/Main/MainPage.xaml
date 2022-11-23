@@ -15,6 +15,7 @@
         <MenuBarItem Text="Translate" BindingContext="{Binding Path=BindingContext, Source={x:Reference page}}">
             <MenuFlyoutItem Text="Scan" Command="{Binding ScanCommand}" />
             <MenuFlyoutItem Text="Parse" Command="{Binding ParseCommand}" />
+            <MenuFlyoutItem Text="Generate" Command="{Binding GenerateCommand}" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
 

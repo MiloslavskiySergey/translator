@@ -64,6 +64,9 @@
       <Compile Update="Windows\AST\ASTPage.xaml.cs">
         <DependentUpon>ASTPage.xaml</DependentUpon>
       </Compile>
+      <Compile Update="Windows\IntermediateCode\IntermediateCodePage.xaml.cs">
+        <DependentUpon>IntermediateCodePage.xaml</DependentUpon>
+      </Compile>
       <Compile Update="Windows\Tokens\TokensPage.xaml.cs">
         <DependentUpon>TokensPage.xaml</DependentUpon>
       </Compile>
@@ -76,13 +79,15 @@
       <MauiXaml Update="Windows\AST\ASTPage.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>
+      <MauiXaml Update="Windows\IntermediateCode\IntermediateCodePage.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </MauiXaml>
       <MauiXaml Update="Windows\Tokens\TokensPage.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Shared\" />
       <Folder Include="wwwroot\dist\" />
     </ItemGroup>
 

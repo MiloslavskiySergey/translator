@@ -1,0 +1,45 @@
+﻿<Layout>
+	<LayoutContent>
+		@if(code is not null)
+		{
+			<div id="editor" />
+		}
+		else
+		{
+			<Div Margin="Margin.Is2" TextColor="TextColor.Danger">@error</Div>
+		}
+	</LayoutContent>
+</Layout>
+
+@inject TranslatorService Translator
+@inject IJSRuntime JsRuntime
+
+@code {
+	private string? code = null;
+	private string? error = null;
+
+	protected override void OnInitialized()
+	{
+		try
+		{
+			code = Translator.GenerateIntermediateCode();
+		}
+		catch (ParserException e)
+		{
+			error = e.Message;
+		}
+		catch (IntermediateCodeGeneratorException e)
+		{
+			error = e.Message;
+		}
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender && error is null)
+		{
+			await JsRuntime.InvokeVoidAsync("TranslatorJs.loadIntermediateCodeEditor");
+			await JsRuntime.InvokeVoidAsync("TranslatorJs.updateProgram", new[] { code });
+		}
+	}
+}

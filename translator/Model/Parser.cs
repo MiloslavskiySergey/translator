@@ -1,15 +1,18 @@
-﻿using Blazorise;
-
-namespace translator.Model;
+﻿namespace translator.Model;
 
 public class Parser
 {
+    public BlockNode Parse()
+    {
+        return Program();
+    }
+
     private readonly Lexer _lexer;
     private TokenPosition? _current = null;
 
     private TokenPosition TokenPosition
     {
-        get 
+        get
         {
             if (_current is null)
                 throw Error("Неожиданное окончание программы");
@@ -22,7 +25,7 @@ public class Parser
         _lexer = lexer;
     }
 
-    public BlockNode Program()
+    private BlockNode Program()
     {
         Scan();
         var block = Block();
@@ -194,10 +197,10 @@ public class Parser
     {
         if (IsIdentifier())
             return Identifier();
-        if (IsIntegerNumber())
-            return IntegerNumber();
-        if (IsFloatNumber())
-            return FloatNumber();
+        if (IsIntegerConstant())
+            return IntegerConstant();
+        if (IsFloatConstant())
+            return FloatConstant();
         if (IsStringConstant())
             return StringConstant();
         if (IsBoolConstant())
@@ -209,20 +212,20 @@ public class Parser
         throw Error("Ожидалось выражение");
     }
 
-    private IntegerNumberNode IntegerNumber()
+    private IntegerConstantNode IntegerConstant()
     {
         var position = TokenPosition.Position;
-        var token = (IntegerNumberToken)TokenPosition.Token;
+        var token = (IntegerConstantToken)TokenPosition.Token;
         Scan();
-        return new IntegerNumberNode(token.Value, position);
+        return new IntegerConstantNode(token.Value, position);
     }
 
-    private FloatNumberNode FloatNumber()
+    private FloatConstantNode FloatConstant()
     {
         var position = TokenPosition.Position;
-        var token = (FloatNumberToken)TokenPosition.Token;
+        var token = (FloatConstantToken)TokenPosition.Token;
         Scan();
-        return new FloatNumberNode(token.Value, position);
+        return new FloatConstantNode(token.Value, position);
     }
 
     private StringConstantNode StringConstant()
@@ -405,70 +408,19 @@ public class Parser
             throw Error($"Ожидался разделитель `{separator}`");
     }
 
-    private bool IsIdentifier()
-    {
-        return TokenPosition.Token.Type == TokenType.Identifier;
-    }
-
-    private bool IsType()
-    {
-        return TokenPosition.Token.Type == TokenType.Type;
-    }
-
-    private bool IsKeyWord(string keyWord)
-    {
-        return TokenPosition.Token.Type == TokenType.KeyWord && TokenPosition.Token.Lexema == keyWord;
-    }
-
-    private bool IsSeparator(string separator)
-    {
-        return TokenPosition.Token.Type == TokenType.Separator && TokenPosition.Token.Lexema == separator;
-    }
-
-    private bool IsRelationGroupOperation()
-    {
-        return TokenPosition.Token.Type == TokenType.RelationGroupOperation;
-    }
-
-    private bool IsAdditionGroupOperation()
-    {
-        return TokenPosition.Token.Type == TokenType.AdditionGroupOperation;
-    }
-
-    private bool IsMultiplicationGroupOperation()
-    {
-        return TokenPosition.Token.Type == TokenType.MultiplicationGroupOperation;
-    }
-
-    private bool IsPowerOperation()
-    {
-        return TokenPosition.Token.Type == TokenType.PowerOperation;
-    }
-
-    private bool IsIntegerNumber()
-    {
-        return TokenPosition.Token.Type == TokenType.IntegerNumber;
-    }
-
-    private bool IsFloatNumber()
-    {
-        return TokenPosition.Token.Type == TokenType.FloatNumber;
-    }
-
-    private bool IsStringConstant()
-    {
-        return TokenPosition.Token.Type == TokenType.StringConstant;
-    }
-
-    private bool IsBoolConstant()
-    {
-        return TokenPosition.Token.Type == TokenType.BoolConstant;
-    }
-
-    private bool IsUnaryOperation()
-    {
-        return TokenPosition.Token.Type == TokenType.UnaryOperation;
-    }
+    private bool IsIdentifier() => TokenPosition.Token.Type == TokenType.Identifier;
+    private bool IsType() => TokenPosition.Token.Type == TokenType.Type;
+    private bool IsKeyWord(string keyWord) => TokenPosition.Token.Type == TokenType.KeyWord && TokenPosition.Token.Lexema == keyWord;
+    private bool IsSeparator(string separator) => TokenPosition.Token.Type == TokenType.Separator && TokenPosition.Token.Lexema == separator;
+    private bool IsRelationGroupOperation() => TokenPosition.Token.Type == TokenType.RelationGroupOperation;
+    private bool IsAdditionGroupOperation() => TokenPosition.Token.Type == TokenType.AdditionGroupOperation;
+    private bool IsMultiplicationGroupOperation() => TokenPosition.Token.Type == TokenType.MultiplicationGroupOperation;
+    private bool IsPowerOperation() => TokenPosition.Token.Type == TokenType.PowerOperation;
+    private bool IsIntegerConstant() => TokenPosition.Token.Type == TokenType.IntegerConstant;
+    private bool IsFloatConstant() => TokenPosition.Token.Type == TokenType.FloatConstant;
+    private bool IsStringConstant() => TokenPosition.Token.Type == TokenType.StringConstant;
+    private bool IsBoolConstant() => TokenPosition.Token.Type == TokenType.BoolConstant;
+    private bool IsUnaryOperation() => TokenPosition.Token.Type == TokenType.UnaryOperation;
 
     private ParserException Error(string message)
     {
@@ -516,19 +468,19 @@ public class IdentifierNode : Node
     }
 }
 
-public class IntegerNumberNode : Node
+public class IntegerConstantNode : Node
 {
     public int Value { get; private set; }
-    public IntegerNumberNode(int value, ProgramPosition position) : base(position)
+    public IntegerConstantNode(int value, ProgramPosition position) : base(position)
     {
         Value = value;
     }
 }
 
-public class FloatNumberNode : Node
+public class FloatConstantNode : Node
 {
     public double Value { get; private set; }
-    public FloatNumberNode(double value, ProgramPosition position) : base(position)
+    public FloatConstantNode(double value, ProgramPosition position) : base(position)
     {
         Value = value;
     }

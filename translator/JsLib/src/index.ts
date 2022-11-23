@@ -21,3 +21,9 @@ export function loadEditor(): void {
         await main!.invokeMethodAsync<void>('UpdateProgram', model.getValue());
     });
 }
+
+export function loadIntermediateCodeEditor(): void {
+    editor = monaco.editor.create(document.getElementById('editor')!, { readOnly: true });
+    const model = editor.getModel()!;
+    model.setEOL(monaco.editor.EndOfLineSequence.LF);
+}

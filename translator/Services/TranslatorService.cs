@@ -50,6 +50,7 @@ public class TranslatorService : ObservableObject
     public ICommand SaveCommand { get; private set; }
     public ICommand ScanCommand { get; private set; }
     public ICommand ParseCommand { get; private set; }
+    public ICommand GenerateCommand { get; private set; }
 
     public TranslatorService(ISaveProgramFileDialogService saveProgramDialog)
     {
@@ -105,6 +106,11 @@ public class TranslatorService : ObservableObject
             var astWindow = new Window(new ASTPage());
             Application.Current!.OpenWindow(astWindow);
         });
+        GenerateCommand = new Command(() =>
+        {
+            var intermediateCodeWindow = new Window(new IntermediateCodePage());
+            Application.Current!.OpenWindow(intermediateCodeWindow);
+        });
     }
 
     public async Task SaveChanges() 
@@ -127,9 +133,9 @@ public class TranslatorService : ObservableObject
         {
             object value = "-";
             var token = tokenPosition.Token;
-            if (token is IntegerNumberToken intagerToken)
-                value = intagerToken.Value;
-            else if (token is FloatNumberToken floatToken)
+            if (token is IntegerConstantToken integerToken)
+                value = integerToken.Value;
+            else if (token is FloatConstantToken floatToken)
                 value = floatToken.Value;
             else if (token is BoolConstantToken boolToken)
                 value = boolToken.Value;
@@ -158,8 +164,21 @@ public class TranslatorService : ObservableObject
         var parser = new Parser(lexer);
         return new List<TreeViewItem>
         {
-            ParseNode(parser.Program())
+            ParseNode(parser.Parse())
         };
+    }
+
+    public string GenerateIntermediateCode()
+    {
+        var result = "";
+        var lexer = new Lexer(Program);
+        var parser = new Parser(lexer);
+        var generator = new IntermediateCodeGenerator(parser);
+        generator.Emit += (line) => {
+            result += $"{line}\n";
+        };
+        generator.Generate();
+        return result;
     }
 
     private TreeViewItem ParseNode(Node node)
@@ -193,13 +212,13 @@ public class TranslatorService : ObservableObject
         {
             return new TreeViewItem($"{nameof(IdentifierNode)}: {identifierNode.Name}");
         }
-        if (node is IntegerNumberNode integerNumberNode)
+        if (node is IntegerConstantNode integerConstantNode)
         {
-            return new TreeViewItem($"{nameof(IntegerNumberNode)}: {integerNumberNode.Value}");
+            return new TreeViewItem($"{nameof(IntegerConstantNode)}: {integerConstantNode.Value}");
         }
-        if (node is FloatNumberNode floatNumberNode)
+        if (node is FloatConstantNode floatConstantNode)
         {
-            return new TreeViewItem($"{nameof(FloatNumberNode)}: {floatNumberNode.Value}");
+            return new TreeViewItem($"{nameof(FloatConstantNode)}: {floatConstantNode.Value}");
         }
         if (node is StringConstantNode stringConstantNode)
         {

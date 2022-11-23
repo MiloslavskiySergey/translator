@@ -37,10 +37,7 @@ public class Lexer : IEnumerable<TokenPosition>
             token = Scan();
         }
     }
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
     /// Метод для получения очередного токена
@@ -280,12 +277,12 @@ public class Lexer : IEnumerable<TokenPosition>
         {
             if (TryParseToInteger(lexema.ToLower(), out var i))
             {
-                result = new IntegerNumberToken(lexema, i);
+                result = new IntegerConstantToken(lexema, i);
                 return true;
             }
             if (TryParseToFloat(lexema.ToLower(), out var f))
             {
-                result = new FloatNumberToken(lexema, f);
+                result = new FloatConstantToken(lexema, f);
                 return true;
             }
             result = null;
@@ -437,12 +434,12 @@ public record Token(TokenType Type, string Lexema);
 /// <summary>
 /// Запись целого числа с дополнительным полем для значения числа
 /// </summary>
-public record IntegerNumberToken(string Lexema, int Value) : Token(TokenType.IntegerNumber, Lexema);
+public record IntegerConstantToken(string Lexema, int Value) : Token(TokenType.IntegerConstant, Lexema);
 
 /// <summary>
 /// Запись числа с плавающей точкой с дополнительным полем для значения числа
 /// </summary>
-public record FloatNumberToken(string Lexema, double Value) : Token(TokenType.FloatNumber, Lexema);
+public record FloatConstantToken(string Lexema, double Value) : Token(TokenType.FloatConstant, Lexema);
 
 /// <summary>
 /// Запись строки с дополнительным полем для строки
@@ -468,8 +465,8 @@ public enum TokenType
     Type,
     BoolConstant,
     KeyWord,
-    IntegerNumber,
-    FloatNumber,
+    IntegerConstant,
+    FloatConstant,
     StringConstant,
     Identifier,
 }

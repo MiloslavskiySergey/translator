@@ -70,12 +70,11 @@ public class IntermediateCodeGenerator
     private void GenerateAssignmentNode(AssignmentNode node)
     {
         var toVariable = _variablesTable.GetVariable(node.Identifier);
-        var fromValue = GenerateExpression(node.Expression, toVariable);
-        if (fromValue != toVariable)
-            AssignValue(toVariable, fromValue, node.Expression.Position);
+        var fromValue = GenerateExpression(node.Expression, true);
+        EmitAssignValue(toVariable, fromValue, node.Expression.Position);
     }
 
-    private Variable GenerateUnaryOperationNode(UnaryOperationNode node, Variable? toVariable = null)
+    private Value GenerateUnaryOperationNode(UnaryOperationNode node, bool isResultExpression = false)
     {
         var operand = GenerateExpression(node.Operand);
         var key = (node.Operator.Name, operand.Type);
@@ -88,15 +87,14 @@ public class IntermediateCodeGenerator
         if (possibleUnaryOperation.CastOperand.HasValue)
             operand = CastValue(operand, possibleUnaryOperation.CastOperand.Value, node.Operand.Position);
         Variable variable;
-        if (toVariable is not null && toVariable.Type == possibleUnaryOperation.ResultType)
-            variable = toVariable;
-        else
-            variable = NextVariable(possibleUnaryOperation.ResultType);
-        AssignUnaryOperator(variable, operand, node.Operator);
+        if (isResultExpression)
+            return new Expression(GenerateUnaryOperator(operand.ToString(), node.Operator.Name), possibleUnaryOperation.ResultType);
+        variable = NextVariable(possibleUnaryOperation.ResultType);
+        EmitUnaryOperator(variable, operand, node.Operator);
         return variable;
     }
 
-    private Variable GenerateBinaryOperationNode(BinaryOperationNode node, Variable? toVariable = null)
+    private Value GenerateBinaryOperationNode(BinaryOperationNode node, bool isResultExpression = false)
     {
         var leftOperand = GenerateExpression(node.LeftOperand);
         var rightOperand = GenerateExpression(node.RightOperand);
@@ -111,16 +109,40 @@ public class IntermediateCodeGenerator
             leftOperand = CastValue(leftOperand, possibleBinaryOperation.CastLeftOperand.Value, node.Operator.Position);
         if (possibleBinaryOperation.CastRightOperand.HasValue)
             rightOperand = CastValue(rightOperand, possibleBinaryOperation.CastRightOperand.Value, node.Operator.Position);
-        Variable variable;
-        if (toVariable is not null && toVariable.Type == possibleBinaryOperation.ResultType)
-            variable = toVariable;
-        else
-            variable = NextVariable(possibleBinaryOperation.ResultType);
-        AssignBinaryOperator(variable, leftOperand, rightOperand, node.Operator);
+        if (isResultExpression)
+            return new Expression(GenerateBinaryOperator(leftOperand.ToString(), rightOperand.ToString(), node.Operator.Name), possibleBinaryOperation.ResultType);
+        var variable = NextVariable(possibleBinaryOperation.ResultType);
+        EmitBinaryOperator(variable, leftOperand, rightOperand, node.Operator);
         return variable;
     }
 
-    private void GenerateConditionalOperotorNode(ConditionalOperotorNode node) { }
+    private void GenerateConditionalOperotorNode(ConditionalOperotorNode node)
+    {
+        var labels = new List<string>();
+        foreach (var condition in node.Conditions)
+        {
+            var expression = GenerateExpression(condition.Condition, true);
+            var label = NextLabelName();
+            EmitConditionalOperator(expression, label, condition.Condition.Position);
+            labels.Add(label);
+        }
+        var elseLabel = NextLabelName();
+        var continueLabel = node.ElseBody is null ? elseLabel : NextLabelName();
+        EmitGoto(elseLabel);
+        for (var i = 0; i < node.Conditions.Count; i++)
+        {
+            EmitLabel(labels[i]);
+            GenerateBlockNode(node.Conditions[i].Body);
+            if (i != node.Conditions.Count - 1 || node.ElseBody is not null)
+                EmitGoto(continueLabel);
+        }
+        if (node.ElseBody is not null)
+        {
+            EmitLabel(elseLabel);
+            GenerateBlockNode(node.ElseBody);
+        }
+        EmitLabel(continueLabel);
+    }
 
     private void GenerateFixedLoopOperatorNode(FixedLoopOperatorNode node) { }
 
@@ -130,24 +152,23 @@ public class IntermediateCodeGenerator
 
     private void GenerateOutputOperatorNode(OutputOperatorNode node) { }
 
-    private Value GenerateExpression(Node node, Variable? toVariable = null)
+    private Value GenerateExpression(Node node, bool isResultExpression = false)
     {
         if (node is UnaryOperationNode unaryOperationNode)
-            return GenerateUnaryOperationNode(unaryOperationNode, toVariable);
-        else if (node is BinaryOperationNode binaryOperationNode)
-            return GenerateBinaryOperationNode(binaryOperationNode, toVariable);
-        else if (node is IdentifierNode identifierNode)
-            return _variablesTable.GetVariable(identifierNode);
-        else if (node is IntegerConstantNode integerConstantNode)
+           return GenerateUnaryOperationNode(unaryOperationNode, isResultExpression);
+        if (node is BinaryOperationNode binaryOperationNode)
+           return GenerateBinaryOperationNode(binaryOperationNode, isResultExpression);
+        if (node is IdentifierNode identifierNode)
+            return _variablesTable.GetVariable(identifierNode);    
+        if (node is IntegerConstantNode integerConstantNode)
             return new IntegerConstant(integerConstantNode.Value);
-        else if (node is FloatConstantNode floatConstantNode)
+        if (node is FloatConstantNode floatConstantNode)
             return new FloatConstant(floatConstantNode.Value);
-        else if (node is StringConstantNode stringConstantNode)
+        if (node is StringConstantNode stringConstantNode)
             return new StringConstant(stringConstantNode.Value);
-        else if (node is BoolConstantNode boolConstantNode)
+        if (node is BoolConstantNode boolConstantNode)
             return new BoolConstant(boolConstantNode.Value);
-        else
-            throw new InvalidOperationException($"Invalid expression type: {node}.");
+        throw new InvalidOperationException($"Invalid expression type: {node}.");
     }
 
     private Value CastValue(Value value, DataType type, ProgramPosition position)
@@ -155,40 +176,67 @@ public class IntermediateCodeGenerator
         if (value is IntegerConstant integerConstant && type == DataType.Float)
             return new FloatConstant(integerConstant.Value);
         var variable = NextVariable(type);
-        AssignValue(variable, value, position);
+        EmitAssignValue(variable, value, position);
         return variable;
     }
-    private void AssignValue(Variable to, Value from, ProgramPosition position)
+    private void EmitLabel(string label)
+    {
+        Emit?.Invoke(GenerateLabel(label));
+    }
+    private void EmitGoto(string label)
+    {
+        Emit?.Invoke(GenerateGoto(label));
+    }
+    private void EmitAssignValue(Variable to, Value from, ProgramPosition position)
     {
         if (from.Type == to.Type)
         {
-            Emit?.Invoke(Assign(to.ToString(), from.ToString()));
+            Emit?.Invoke(GenerateAssign(to.ToString(), from.ToString()));
         }
         else if (from.Type == DataType.Integer && to.Type == DataType.Float)
         {
             if (from is IntegerConstant integerConstant)
-                Emit?.Invoke(Assign(to.ToString(), new FloatConstant(integerConstant.Value).ToString()));
+            {
+                Emit?.Invoke(GenerateAssign(to.ToString(), new FloatConstant(integerConstant.Value).ToString()));
+            }
+            else if (from is Expression expression)
+            {
+                var variable = NextVariable(expression.Type);
+                EmitAssignValue(variable, from, position);
+                EmitAssignValue(to, variable, position);
+            }
             else
-                Emit?.Invoke(Assign(to.ToString(), Cast(from.ToString(), to.Type)));
+            {
+                Emit?.Invoke(GenerateAssign(to.ToString(), GenerateCast(from.ToString(), to.Type)));
+            }
         }
         else
         {
             throw new IntermediateCodeGeneratorException($"Can't assing `{from.Type}` to `{to.Type}`", position);
         }
     }
-    private void AssignUnaryOperator(Variable to, Value operand, OperatorNode node)
+    private void EmitUnaryOperator(Variable to, Value operand, OperatorNode operatorNode)
     {
-        Emit?.Invoke(Assign(to.Name, ApplyUnaryOperator(operand.ToString(), node.Name)));
+        Emit?.Invoke(GenerateAssign(to.Name, GenerateUnaryOperator(operand.ToString(), operatorNode.Name)));
     }
-    private void AssignBinaryOperator(Variable to, Value leftOperand, Value rightOperand, OperatorNode node)
+    private void EmitBinaryOperator(Variable to, Value leftOperand, Value rightOperand, OperatorNode operatorNode)
     {
-        Emit?.Invoke(Assign(to.Name, ApplyBinaryOperator(leftOperand.ToString(), rightOperand.ToString(), node.Name)));
+        Emit?.Invoke(GenerateAssign(to.Name, GenerateBinaryOperator(leftOperand.ToString(), rightOperand.ToString(), operatorNode.Name)));
+    }
+    private void EmitConditionalOperator(Value expression, string label, ProgramPosition position)
+    {
+        if (expression.Type != DataType.Bool)
+            throw new IntermediateCodeGeneratorException($"Can't cast `{expression.Type}` to boolean", position);
+        Emit?.Invoke(GenerateeConditionalOperotor(expression.ToString(), label));
     }
 
-    private static string Assign(string to, string from) => $"{to} = {from}";
-    private static string Cast(string value, DataType type) => $"{type}({value})";
-    private static string ApplyUnaryOperator(string operand, string operatorName) => $"{operatorName} {operand}";
-    private static string ApplyBinaryOperator(string leftOperand, string rightOperand, string operatorName) => $"{leftOperand} {operatorName} {rightOperand}";
+    private static string GenerateLabel(string label) => $"{label}:";
+    private static string GenerateGoto(string label) => $"goto {label}";
+    private static string GenerateAssign(string to, string from) => $"{to} = {from}";
+    private static string GenerateCast(string value, DataType type) => $"{type}({value})";
+    private static string GenerateUnaryOperator(string operand, string operatorName) => $"{operatorName} {operand}";
+    private static string GenerateBinaryOperator(string leftOperand, string rightOperand, string operatorName) => $"{leftOperand} {operatorName} {rightOperand}";
+    private static string GenerateeConditionalOperotor(string expression, string label) => $"if {expression} goto {label}";
 
     private readonly static Dictionary<
         (string operatorName, DataType operandType),
@@ -339,7 +387,7 @@ internal class LabelsNamesGenerator : IEnumerable<string>
     {
         while (true)
         {
-            var name = $"@l{_index}:";
+            var name = $"@l{_index}";
             _index++;
             yield return name;
         }
@@ -359,6 +407,10 @@ internal record Value(DataType Type);
 internal record Variable(string Name, DataType Type) : Value(Type)
 {
     public override string ToString() => Name;
+}
+internal record Expression(string Value, DataType Type) : Value(Type)
+{
+    public override string ToString() => Value;
 }
 internal record Constant<T>(T Value, DataType Type) : Value(Type) where T : notnull;
 internal record IntegerConstant(int Value) : Constant<int>(Value, DataType.Integer)

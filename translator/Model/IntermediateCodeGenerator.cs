@@ -8,37 +8,29 @@ public class IntermediateCodeGenerator
     public IntermediateCodeGenerator(Parser parser)
     {
         _parser = parser;
+        _variablesTable = new(_variablesNamesGenerator);
     }
 
     public event Action<string>? Emit;
 
     public void Generate()
     {
-        GenerateBlockNode(_parser.Parse());
+        GenerateBlockNode(_parser.Parse(), false);
     }
 
     private readonly Parser _parser;
-    private readonly IEnumerator<string> _variablesNamesGenerator = new VariablesNamesGenerator().GetEnumerator();
-    private readonly IEnumerator<string> _labelsNamesGenerator = new LabelsNamesGenerator().GetEnumerator();
-    private readonly VariablesTable _variablesTable = new();
+    private readonly VariablesNamesGenerator _variablesNamesGenerator = new VariablesNamesGenerator();
+    private readonly LabelsNamesGenerator _labelsNamesGenerator = new LabelsNamesGenerator();
+    private VariablesTable _variablesTable;
 
-    private string NextVariableName()
-    {
-        _variablesNamesGenerator.MoveNext();
-        return _variablesNamesGenerator.Current;
-    }
     private Variable NextVariable(DataType type)
     {
-        return _variablesTable.AddVariable(NextVariableName(), type);
+        return _variablesTable.AddVariable(_variablesNamesGenerator.Next(), type);
     }
 
-    private string NextLabelName()
-    {
-        _labelsNamesGenerator.MoveNext();
-        return _labelsNamesGenerator.Current;
-    }
-
-    private void GenerateBlockNode(BlockNode node) {
+    private void GenerateBlockNode(BlockNode node, bool enter = true) {
+        if (enter)
+            _variablesTable = _variablesTable.EnterScope();
         foreach (var child in node.Children)
         {
             if (child is DescriptionNode descriptionNode)
@@ -58,6 +50,8 @@ public class IntermediateCodeGenerator
             else
                 throw new InvalidOperationException($"Invalid child type of BlockNode: {child.GetType().Name}.");
         }
+        if (enter)
+            _variablesTable = _variablesTable.ExitScope();
     }
 
     private void GenerateDescriptionNode(DescriptionNode node)
@@ -122,12 +116,12 @@ public class IntermediateCodeGenerator
         foreach (var condition in node.Conditions)
         {
             var expression = GenerateExpression(condition.Condition, true);
-            var label = NextLabelName();
+            var label = _labelsNamesGenerator.Next();
             EmitConditionalOperator(expression, label, condition.Condition.Position);
             labels.Add(label);
         }
-        var elseLabel = NextLabelName();
-        var continueLabel = node.ElseBody is null ? elseLabel : NextLabelName();
+        var elseLabel = _labelsNamesGenerator.Next();
+        var continueLabel = node.ElseBody is null ? elseLabel : _labelsNamesGenerator.Next();
         EmitGoto(elseLabel);
         for (var i = 0; i < node.Conditions.Count; i++)
         {
@@ -364,8 +358,17 @@ public class IntermediateCodeGeneratorException : Exception
 }
 
 internal class VariablesNamesGenerator : IEnumerable<string>
-{
-    private int _index = 0;
+{    
+    public VariablesNamesGenerator()
+    {
+        _generator = GetEnumerator();
+    }
+
+    public string Next()
+    {
+        _generator.MoveNext();
+        return _generator.Current;
+    }
 
     public IEnumerator<string> GetEnumerator()
     {
@@ -377,11 +380,23 @@ internal class VariablesNamesGenerator : IEnumerable<string>
         }
     }
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    private int _index = 0;
+    private readonly IEnumerator<string> _generator;
 }
 
 internal class LabelsNamesGenerator : IEnumerable<string>
 {
-    private int _index = 0;
+    public LabelsNamesGenerator()
+    {
+        _generator = GetEnumerator();
+    }
+
+    public string Next()
+    {
+        _generator.MoveNext();
+        return _generator.Current;
+    }
 
     public IEnumerator<string> GetEnumerator()
     {
@@ -393,6 +408,9 @@ internal class LabelsNamesGenerator : IEnumerable<string>
         }
     }
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    private int _index = 0;
+    private readonly IEnumerator<string> _generator;
 }
 
 internal enum DataType
@@ -435,14 +453,15 @@ internal record PossibleBinaryOperation(DataType ResultType, DataType? CastLeftO
 
 internal class VariablesTable
 {
-    public VariablesTable()
+    public VariablesTable(VariablesNamesGenerator variablesNamesGenerator)
     {
         _prevous = null;
+        _variablesNamesGenerator = variablesNamesGenerator;
     }
 
     public VariablesTable EnterScope()
     {
-        return new VariablesTable(this);
+        return new VariablesTable(this, _variablesNamesGenerator);
     }
     public VariablesTable ExitScope()
     {
@@ -450,37 +469,59 @@ internal class VariablesTable
             throw new InvalidOperationException("Can't exit global scope.");
         return _prevous;
     }
-    public bool HasVariable(string name)
-    {
-        return _variables.Find((variable) => variable.Name == name) is not null;
-    }
-    public Variable GetVariable(IdentifierNode node)
-    {
-        var variable = _variables.Find((variable) => variable.Name == node.Name);
-        if (variable is null)
-            throw new IntermediateCodeGeneratorException($"Variable `{node.Name}` not in the scope", node.Position);
-        return variable;
-    }
     public Variable AddVariable(IdentifierNode node, DataType type)
     {
-        if (HasVariable(node.Name))
+        if (HasVariableInScope(node.Name))
             throw new IntermediateCodeGeneratorException($"`{node.Name}` variable is already defined in the scope", node.Position);
-        var variable = new Variable(node.Name, type);
-        _variables.Add(variable);
+        var name = node.Name;
+        if (HasVariable(node.Name))
+            name = _variablesNamesGenerator.Next();
+        var variable = new Variable(name, type);
+        _variables[node.Name] = variable;
         return variable;
     }
     public Variable AddVariable(string name, DataType type)
     {
         var variable = new Variable(name, type);
-        _variables.Add(variable);
+        _variables[name] = variable;
         return variable;
     }
+    public bool HasVariableInScope(string name)
+    {
+        return _variables.ContainsKey(name);
+    }
+    public bool HasVariable(string name)
+    {
+        var table = this;
+        while (table is not null)
+        {
+            if (table.HasVariableInScope(name))
+                return true;
+            table = table._prevous;
+        }
+        return false;
+    }
 
-    private VariablesTable? _prevous;
-    private List<Variable> _variables = new();
+    public Variable GetScopeVariable(IdentifierNode node) => _variables[node.Name];
+    public Variable GetVariable(IdentifierNode node)
+    {
+        var table = this;
+        while (table is not null)
+        {
+            if (table.HasVariableInScope(node.Name))
+                return table.GetScopeVariable(node);
+            table = table._prevous;
+        }
+        throw new IntermediateCodeGeneratorException($"Variable `{node.Name}` not in the scope", node.Position);
+    }
 
-    private VariablesTable(VariablesTable previous)
+    private readonly Dictionary<string, Variable> _variables = new();
+    private readonly VariablesTable? _prevous;
+    private readonly VariablesNamesGenerator _variablesNamesGenerator;
+
+    private VariablesTable(VariablesTable previous, VariablesNamesGenerator variablesNamesGenerator)
     {
         _prevous = previous;
+        _variablesNamesGenerator = variablesNamesGenerator;
     }
 }

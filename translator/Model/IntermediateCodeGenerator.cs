@@ -138,7 +138,39 @@ public class IntermediateCodeGenerator
         EmitLabel(continueLabel);
     }
 
-    private void GenerateFixedLoopOperatorNode(FixedLoopOperatorNode node) { }
+    private void GenerateFixedLoopOperatorNode(FixedLoopOperatorNode node)
+    {
+        var toVariable = _variablesTable.GetVariable(node.Assignment.Identifier);
+        if (toVariable.Type != DataType.Integer)
+            throw new IntermediateCodeGeneratorException("Only integer type permitted for fixed loop variable", node.Assignment.Position);
+        GenerateAssignmentNode(node.Assignment);
+        var expressionLabel = _labelsNamesGenerator.Next();
+        EmitLabel(expressionLabel);
+        var expressionNode = new BinaryOperationNode(
+            new OperatorNode(">", node.Expression.Position),
+            node.Assignment.Identifier,
+            node.Expression,
+            node.Expression.Position
+        );
+        var expression = GenerateExpression(expressionNode, true);
+        var exitLabel = _labelsNamesGenerator.Next();
+        EmitConditionalOperator(expression, exitLabel, expressionNode.Position);
+        GenerateBlockNode(node.Body);
+        var assigmentNodePosition = node.Body.Children[^1].Position;
+        var assigmentNode = new AssignmentNode(
+            node.Assignment.Identifier,
+            new BinaryOperationNode(
+                new OperatorNode("+", assigmentNodePosition),
+                node.Assignment.Identifier,
+                new IntegerConstantNode(1, assigmentNodePosition),
+                assigmentNodePosition
+            ),
+            assigmentNodePosition
+        );
+        GenerateAssignmentNode(assigmentNode);
+        EmitGoto(expressionLabel);
+        EmitLabel(exitLabel);
+    }
 
     private void GenerateConditionalLoopOperatorNode(ConditionalLoopOperatorNode node) { }
 
@@ -211,11 +243,11 @@ public class IntermediateCodeGenerator
     }
     private void EmitUnaryOperator(Variable to, Value operand, OperatorNode operatorNode)
     {
-        Emit?.Invoke(GenerateAssign(to.Name, GenerateUnaryOperator(operand.ToString(), operatorNode.Name)));
+        Emit?.Invoke(GenerateAssign(to.ToString(), GenerateUnaryOperator(operand.ToString(), operatorNode.Name)));
     }
     private void EmitBinaryOperator(Variable to, Value leftOperand, Value rightOperand, OperatorNode operatorNode)
     {
-        Emit?.Invoke(GenerateAssign(to.Name, GenerateBinaryOperator(leftOperand.ToString(), rightOperand.ToString(), operatorNode.Name)));
+        Emit?.Invoke(GenerateAssign(to.ToString(), GenerateBinaryOperator(leftOperand.ToString(), rightOperand.ToString(), operatorNode.Name)));
     }
     private void EmitConditionalOperator(Value expression, string label, ProgramPosition position)
     {

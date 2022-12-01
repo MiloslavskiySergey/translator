@@ -184,9 +184,20 @@ public class IntermediateCodeGenerator
         EmitConditionalOperator(expression, bodyLabel, node.Expression.Position);
     }
 
-    private void GenerateInputOperatorNode(InputOperatorNode node) { }
+    private void GenerateInputOperatorNode(InputOperatorNode node)
+    {
+        foreach (var identifierNode in node.Identifiers)
+            EmitInputOperator(identifierNode);
+    }
 
-    private void GenerateOutputOperatorNode(OutputOperatorNode node) { }
+    private void GenerateOutputOperatorNode(OutputOperatorNode node)
+    {
+        foreach (var expressionNode in node.Expressions)
+        {
+            var value = GenerateExpression(expressionNode);
+            EmitOutputOperator(value);
+        }
+    }
 
     private Value GenerateExpression(Node node, bool isResultExpression = false)
     {
@@ -265,6 +276,14 @@ public class IntermediateCodeGenerator
             throw new IntermediateCodeGeneratorException($"Can't cast `{expression.Type}` to boolean", position);
         Emit?.Invoke(GenerateeConditionalOperotor(expression.ToString(), label));
     }
+    private void EmitInputOperator(IdentifierNode identifierNode)
+    {
+        Emit?.Invoke(GenerateInputOperator(identifierNode.Name));
+    }
+    private void EmitOutputOperator(Value value)
+    {
+        Emit?.Invoke(GenerateOutputOperator(value.ToString()));
+    }
 
     private static string GenerateLabel(string label) => $"{label}:";
     private static string GenerateGoto(string label) => $"goto {label}";
@@ -273,6 +292,8 @@ public class IntermediateCodeGenerator
     private static string GenerateUnaryOperator(string operand, string operatorName) => $"{operatorName} {operand}";
     private static string GenerateBinaryOperator(string leftOperand, string rightOperand, string operatorName) => $"{leftOperand} {operatorName} {rightOperand}";
     private static string GenerateeConditionalOperotor(string expression, string label) => $"if {expression} goto {label}";
+    private static string GenerateInputOperator(string variable) => $"Input({variable})";
+    private static string GenerateOutputOperator(string value) => $"Output({value})";
 
     private readonly static Dictionary<
         (string operatorName, DataType operandType),

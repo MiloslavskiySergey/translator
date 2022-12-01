@@ -172,7 +172,17 @@ public class IntermediateCodeGenerator
         EmitLabel(exitLabel);
     }
 
-    private void GenerateConditionalLoopOperatorNode(ConditionalLoopOperatorNode node) { }
+    private void GenerateConditionalLoopOperatorNode(ConditionalLoopOperatorNode node)
+    {
+        var bodyLabel = _labelsNamesGenerator.Next();
+        var expressionLabel = _labelsNamesGenerator.Next();
+        EmitGoto(expressionLabel);
+        EmitLabel(bodyLabel);
+        GenerateBlockNode(node.Body);
+        EmitLabel(expressionLabel);
+        var expression = GenerateExpression(node.Expression, true);
+        EmitConditionalOperator(expression, bodyLabel, node.Expression.Position);
+    }
 
     private void GenerateInputOperatorNode(InputOperatorNode node) { }
 

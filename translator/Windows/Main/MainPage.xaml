@@ -16,6 +16,7 @@
             <MenuFlyoutItem Text="Scan" Command="{Binding ScanCommand}" />
             <MenuFlyoutItem Text="Parse" Command="{Binding ParseCommand}" />
             <MenuFlyoutItem Text="Generate" Command="{Binding GenerateCommand}" />
+            <MenuFlyoutItem Text="Interpret" Command="{Binding InterpretCommand}" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
 

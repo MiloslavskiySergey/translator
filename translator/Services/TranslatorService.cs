@@ -51,8 +51,9 @@ public class TranslatorService : ObservableObject
     public ICommand ScanCommand { get; private set; }
     public ICommand ParseCommand { get; private set; }
     public ICommand GenerateCommand { get; private set; }
+    public ICommand InterpretCommand { get; private set; }
 
-    public TranslatorService(ISaveProgramFileDialogService saveProgramDialog)
+    public TranslatorService(ISaveProgramFileDialogService saveProgramDialog, ITerminalService terminal)
     {
         NewCommand = new Command(async () => {
             await SaveChanges();
@@ -110,6 +111,23 @@ public class TranslatorService : ObservableObject
         {
             var intermediateCodeWindow = new Window(new IntermediateCodePage());
             Application.Current!.OpenWindow(intermediateCodeWindow);
+        });
+        InterpretCommand = new Command(() =>
+        {
+            try
+            {
+                var program = GenerateIntermediateCode();
+                var interpreter = new Interpreter(terminal, program);
+                interpreter.Interpret();
+            }
+            catch (ParserException e)
+            {
+                terminal.Write(e.Message);
+            }
+            catch (IntermediateCodeGeneratorException e)
+            {
+                terminal.Write(e.Message);
+            }
         });
     }
 
@@ -178,7 +196,7 @@ public class TranslatorService : ObservableObject
             result += $"{line}\n";
         };
         generator.Generate();
-        return result;
+        return result[..^1];
     }
 
     private TreeViewItem ParseNode(Node node)

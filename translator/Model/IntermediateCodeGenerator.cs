@@ -187,7 +187,10 @@ public class IntermediateCodeGenerator
     private void GenerateInputOperatorNode(InputOperatorNode node)
     {
         foreach (var identifierNode in node.Identifiers)
-            EmitInputOperator(identifierNode);
+        {
+            var variable = _variablesTable.GetVariable(identifierNode);
+            EmitInputOperator(variable);
+        }
     }
 
     private void GenerateOutputOperatorNode(OutputOperatorNode node)
@@ -274,11 +277,12 @@ public class IntermediateCodeGenerator
     {
         if (expression.Type != DataType.Bool)
             throw new IntermediateCodeGeneratorException($"Can't cast `{expression.Type}` to boolean", position);
-        Emit?.Invoke(GenerateeConditionalOperotor(expression.ToString(), label));
+        Emit?.Invoke(GenerateConditionalOperotor(expression.ToString(), label));
     }
-    private void EmitInputOperator(IdentifierNode identifierNode)
+    private void EmitInputOperator(Variable variable)
     {
-        Emit?.Invoke(GenerateInputOperator(identifierNode.Name));
+        Emit?.Invoke(GenerateInputOperator(variable.ToString()));
+        Emit?.Invoke(GenerateAssign(variable.ToString(), GenerateCast(variable.ToString(), variable.Type)));
     }
     private void EmitOutputOperator(Value value)
     {
@@ -291,7 +295,7 @@ public class IntermediateCodeGenerator
     private static string GenerateCast(string value, DataType type) => $"{type}({value})";
     private static string GenerateUnaryOperator(string operand, string operatorName) => $"{operatorName} {operand}";
     private static string GenerateBinaryOperator(string leftOperand, string rightOperand, string operatorName) => $"{leftOperand} {operatorName} {rightOperand}";
-    private static string GenerateeConditionalOperotor(string expression, string label) => $"if {expression} goto {label}";
+    private static string GenerateConditionalOperotor(string expression, string label) => $"if {expression} goto {label}";
     private static string GenerateInputOperator(string variable) => $"Input({variable})";
     private static string GenerateOutputOperator(string value) => $"Output({value})";
 
@@ -476,7 +480,7 @@ internal class LabelsNamesGenerator : IEnumerable<string>
     private readonly IEnumerator<string> _generator;
 }
 
-internal enum DataType
+public enum DataType
 {
     Integer,
     Float,

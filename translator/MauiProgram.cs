@@ -38,8 +38,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<TranslatorService>();
 #if WINDOWS
         builder.Services.AddSingleton<ISaveProgramFileDialogService, SaveProgramFileDialogWindowsService>();
+        builder.Services.AddSingleton<ITerminalService, TerminalWindowsService>();
 #else
         builder.Services.AddSingleton<ISaveProgramFileDialogService, SaveProgramFileDialogBaseService>();
+        builder.Services.AddSingleton<ITerminalService, TerminalBaseService>();
 #endif
 
         return builder.Build();

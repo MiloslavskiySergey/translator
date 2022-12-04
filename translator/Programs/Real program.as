@@ -11,7 +11,6 @@ while continue do
         dim n, i, f %;
         write("Enter n: ");
         read(n);
-        write("\n");
         f as 1;
         for i as 2 to n do
             f as f * i;
@@ -21,24 +20,21 @@ while continue do
         dim a, b, c, d, od, l, r !;
         write("Enter a: ");
         read(a);
-        write("\n");
         write("Enter b: ");
         read(b);
-        write("\n");
         write("Enter c: ");
         read(c);
-        write("\n");
         d as b * b - 4 * a * c;
         l as (0 - b) / 2 * a;
         if d > 0 then
             r as d ^ 0.5 / (2 * a);
             write("x1 = ", l + r, "; ", "x2 = ", l - r, "\n");
         else if d = 0 then
-            write("x = ", l);
+            write("x = ", l, "\n");
         else
             od as 0 - d;
             r as od ^ 0.5 / (2 * a);
-            write("x1 = ", l, " + ", r, " * i", "x2 = ", l, " - ", r, " * i");
+            write("x1 = ", l, " + ", r, " * i", "; ", "x2 = ", l, " - ", r, " * i", "\n");
         endif
     else if action = 3 then
         continue as false;

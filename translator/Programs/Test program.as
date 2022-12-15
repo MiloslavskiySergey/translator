@@ -3,14 +3,14 @@
 Declare variables
 */
 dim a, b, c %;
-a ass 111b;
+a as 111b;
 /* Input b */
-c ass a + b;
+c as a + b;
 if c > 20 then
-    c ass 100;
-    b ass 10;
+    c as 100;
+    b as 10;
 else
     dim d %;
-    d ass 30;
+    d as 30;
 endif
 end

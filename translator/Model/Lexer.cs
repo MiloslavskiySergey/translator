@@ -145,6 +145,9 @@ public class Lexer : IEnumerable<TokenPosition>
 
     public static Dictionary<string, Token> LetterTokens { get; } = new Dictionary<string, Token>()
     {
+
+
+
         { "or", new Token(TokenType.AdditionGroupOperation, "or") },
         { "and", new Token(TokenType.MultiplicationGroupOperation, "and") },
         { "not", new Token(TokenType.UnaryOperation, "not") },
